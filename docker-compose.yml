@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: seachat-postgres
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: seachat-pgadmin
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: pgadminpassword
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
