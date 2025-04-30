@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="app-container">
+    <!-- Sidebar for chat navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1><i class="fas fa-water"></i> Sea Chat</h1>
+            <button id="new-chat-btn" class="new-chat-btn" title="New Chat">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="user-info">
+            <span>{{ current_user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+        <div class="chat-list" id="chat-list">
+            <!-- Chat items will be inserted here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Main chat area -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="current-chat-title" id="current-chat-title">Select or create a chat</div>
+            <div class="header-actions">
+                <button id="rename-chat-btn" class="action-btn" title="Rename Chat" disabled>
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button id="delete-chat-btn" class="action-btn" title="Delete Chat" disabled>
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="messages-container" id="messages-container">
+            <!-- Welcome message shown when no chat is active -->
+            <div class="welcome-container" id="welcome-container">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-fish"></i>
+                    </div>
+                    <h2>Welcome, {{ current_user.username }}</h2>
+                    <p>Start a new conversation with Gemma 3:1B or select an existing chat</p>
+                </div>
+            </div>
+            
+            <!-- Messages will be inserted here by JavaScript -->
+            <div class="chat-messages" id="chat-messages"></div>
+        </div>
+        
+        <div class="message-input-container">
+            <form id="message-form">
+                <textarea 
+                    id="message-input" 
+                    placeholder="Type your message here..." 
+                    rows="1"
+                    disabled
+                ></textarea>
+                <button type="submit" id="send-btn" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Rename chat modal -->
+<div class="modal" id="rename-modal">
+    <div class="modal-content">
+        <h3>Rename Chat</h3>
+        <form id="rename-form">
+            <input type="text" id="new-title-input" placeholder="Enter new title">
+            <div class="modal-actions">
+                <button type="button" id="cancel-rename-btn">Cancel</button>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Confirmation modal -->
+<div class="modal" id="confirm-modal">
+    <div class="modal-content">
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this chat? This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button type="button" id="cancel-delete-btn">Cancel</button>
+            <button type="button" id="confirm-delete-btn">Delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}
