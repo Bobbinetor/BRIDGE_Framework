@@ -839,3 +839,14 @@ button:disabled {
 .logout-btn:hover {
     color: white;
 }
+
+
+.auth-logo {
+    text-align: center;
+}
+
+.auth-logo img {
+    width: 200px; /* Set your desired width */
+    height: auto; /* Maintain aspect ratio */
+    margin: 0 auto;
+}
