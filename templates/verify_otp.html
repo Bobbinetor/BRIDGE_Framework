@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Email - Sea Chat{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-water"></i>
+            </div>
+            <h1>Sea Chat</h1>
+            <p>Please verify your email to continue</p>
+        </div>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form class="auth-form" method="POST" action="{{ url_for('verify_otp') }}">
+            <div class="form-group">
+                <label for="otp">Enter verification code</label>
+                <input type="text" id="otp" name="otp" required autocomplete="off">
+                <small>Enter the 6-digit code we sent to {{ email }}</small>
+            </div>
+            
+            <button type="submit" class="auth-button">Verify</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Didn't receive a code? <a href="{{ url_for('register') }}">Try again</a></p>
+        </div>
+    </div>
+    
+    <div class="auth-background">
+        <div class="waves">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
