@@ -850,3 +850,57 @@ button:disabled {
     height: auto; /* Maintain aspect ratio */
     margin: 0 auto;
 }
+
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.logo-img {
+    width: 40px;
+    height: auto;
+    margin-right: 10px;
+}
+
+
+.app-container {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.sidebar {
+    width: 250px;
+    transition: width 0.3s ease;
+}
+
+.sidebar-collapsed {
+    width: 60px;
+}
+
+.sidebar-collapsed .logo-text,
+.sidebar-collapsed .chat-list span,
+.sidebar-collapsed .user-info span {
+    display: none;
+}
+
+.sidebar-controls {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-sidebar-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 5px;
+}
+
+/* Adjusting content area when sidebar is collapsed */
+.sidebar-collapsed + .chat-container {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}

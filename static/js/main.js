@@ -464,3 +464,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the app
     init();
 });
+
+// Add this to your main.js file or in a script tag at the bottom of index.html
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const sidebar = document.querySelector('.sidebar');
+    const chatContainer = document.querySelector('.chat-container');
+    
+    toggleSidebarBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('sidebar-collapsed');
+        
+        // Update toggle button icon
+        const icon = toggleSidebarBtn.querySelector('i');
+        if (sidebar.classList.contains('sidebar-collapsed')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-expand');
+        } else {
+            icon.classList.remove('fa-expand');
+            icon.classList.add('fa-bars');
+        }
+    });
+});
