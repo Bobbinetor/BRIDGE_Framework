@@ -7,6 +7,10 @@ import uuid
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+import smtplib
+import random
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,8 +31,7 @@ app.config['DEBUG'] = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
 
 db = SQLAlchemy(app)
 
-
-# Initialize login manager - ADDED THIS SECTION
+# Initialize login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -37,12 +40,23 @@ login_manager.login_message = 'Please log in to access this page.'
 # Ollama API endpoint
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 
+# Aggiorna con credenziali Gmail dalla configurazione di email_sender.py
+GMAIL_USERNAME = "bridgeseaeu@gmail.com"
+GMAIL_PASSWORD = "hsrj ctjw qjor kjuc"
+
 # Database Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    # New profile fields
+    gender = db.Column(db.String(20), nullable=True)
+    country = db.Column(db.String(50), nullable=True)
+    birth_date = db.Column(db.Date, nullable=True)
+    preferred_language = db.Column(db.String(20), nullable=True)
+    interaction_mode = db.Column(db.String(10), nullable=True)
+    interests = db.Column(db.String(200), nullable=True)  # Stored as comma-separated values
     chats = db.relationship('Chat', backref='user', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
@@ -68,6 +82,105 @@ class Message(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def send_otp_email(recipient, otp):
+    """Send an email with OTP code using Gmail SMTP configuration"""
+    try:
+        subject = "BRIDGE - Verify Your Email"
+        
+        # HTML version
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    color: #333333;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: #ffffff;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }}
+                .header {{
+                    background-color: #1E88E5;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                }}
+                .content {{
+                    padding: 20px;
+                    text-align: center;
+                }}
+                .otp-code {{
+                    font-size: 28px;
+                    font-weight: bold;
+                    padding: 15px;
+                    margin: 15px 0;
+                    background-color: #f0f7ff;
+                    border-radius: 8px;
+                    border: 1px dashed #1E88E5;
+                    color: #1E88E5;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>BRIDGE - Email Verification</h1>
+                </div>
+                <div class="content">
+                    <p>Thank you for registering with BRIDGE. Use the verification code below:</p>
+                    <div class="otp-code">{otp}</div>
+                    <p>This code will expire in 10 minutes.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Text version (fallback)
+        text_content = f"""
+        BRIDGE - Email Verification
+
+        Thank you for registering with BRIDGE. Use the verification code below:
+        
+        {otp}
+        
+        This code will expire in 10 minutes.
+        """
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = GMAIL_USERNAME
+        msg['To'] = recipient
+        
+        # Attach parts
+        part1 = MIMEText(text_content, 'plain')
+        part2 = MIMEText(html_content, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Gmail SMTP configuration
+        smtp = smtplib.SMTP("smtp.gmail.com", 587)
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.ehlo()
+        smtp.login(GMAIL_USERNAME, GMAIL_PASSWORD)
+        
+        # Send email
+        smtp.sendmail(GMAIL_USERNAME, recipient, msg.as_string())
+        smtp.quit()
+        
+        return True
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
+        return False
 
 # Authentication routes
 @app.route('/login', methods=['GET', 'POST'])
@@ -100,7 +213,6 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # Check if username or email already exists
         user_exists = User.query.filter_by(username=username).first()
         email_exists = User.query.filter_by(email=email).first()
         
@@ -109,16 +221,100 @@ def register():
         elif email_exists:
             flash('Email already exists')
         else:
-            new_user = User(username=username, email=email)
-            new_user.set_password(password)
+            # Genera OTP e salva dati in sessione
+            otp = str(random.randint(100000, 999999))
+            session['pending_user'] = {
+                'username': username,
+                'email': email,
+                'password': password,
+                'otp': otp
+            }
+            try:
+                # Usa la funzione aggiornata con configurazione Gmail
+                if send_otp_email(email, otp):
+                    flash('We have sent a verification code to your email.')
+                    return redirect(url_for('verify_otp'))
+                else:
+                    flash('Error sending verification email. Please try again later.')
+            except Exception as e:
+                flash(f'Error sending verification email: {str(e)}')
+    
+    return render_template('register.html')
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    pending = session.get('pending_user')
+    if not pending:
+        flash('Session expired or missing data. Please register again.')
+        return redirect(url_for('register'))
+    if request.method == 'POST':
+        otp_input = request.form.get('otp')
+        if otp_input == pending['otp']:
+            # Instead of creating user now, redirect to profile completion
+            flash('OTP verified successfully! Please complete your profile.')
+            return redirect(url_for('complete_profile'))
+        else:
+            flash('Invalid OTP code. Please try again.')
+    return render_template('verify_otp.html', email=pending['email'])
+
+@app.route('/complete-profile', methods=['GET', 'POST'])
+def complete_profile():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+        
+    pending = session.get('pending_user')
+    if not pending:
+        flash('Session expired or missing data. Please register again.')
+        return redirect(url_for('register'))
+        
+    if request.method == 'POST':
+        # Get form data
+        gender = request.form.get('gender')
+        country = request.form.get('country')
+        birth_date_str = request.form.get('birth_date')
+        preferred_language = request.form.get('preferred_language')
+        interaction_mode = request.form.get('interaction_mode')
+        interests_list = request.form.getlist('interests')
+        
+        # Validate required fields
+        if not (gender and country and birth_date_str and preferred_language and interaction_mode and interests_list):
+            flash('All fields are required')
+            return render_template('complete_profile.html')
+            
+        try:
+            # Convert birth_date string to Date object
+            from datetime import datetime
+            birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+            
+            # Create the new user with all data
+            new_user = User(
+                username=pending['username'],
+                email=pending['email'],
+                gender=gender,
+                country=country,
+                birth_date=birth_date,
+                preferred_language=preferred_language,
+                interaction_mode=interaction_mode,
+                interests=','.join(interests_list)
+            )
+            new_user.set_password(pending['password'])
             db.session.add(new_user)
             db.session.commit()
             
-            # Log the user in after registration
+            # Log in the user and clean up session
             login_user(new_user)
+            session.pop('pending_user', None)
+            flash('Profile completed successfully! Welcome to Sea Chat.')
             return redirect(url_for('index'))
+            
+        except Exception as e:
+            flash(f'Error creating user: {str(e)}')
+            return render_template('complete_profile.html')
     
-    return render_template('register.html')
+    # GET request - show the form
+    return render_template('complete_profile.html')
 
 @app.route('/logout')
 @login_required
