@@ -7,10 +7,10 @@
     <div class="auth-card">
         <div class="auth-header">
             <div class="auth-logo">
-                <i class="fas fa-water"></i>
+                <img src="{{ url_for('static', filename='images/logo_small.png') }}" alt="Sea Chat Logo" class="logo-img">
             </div>
-            <h1>Sea Chat</h1>
-            <p>Complete your profile to start chatting</p>
+            <h1>Starting BRIDGE...</h1>
+            <p>Complete your profile to begin</p>
         </div>
         
         {% with messages = get_flashed_messages() %}

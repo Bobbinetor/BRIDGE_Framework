@@ -21,7 +21,8 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 # Database configuration from environment variables
 db_user = os.getenv('POSTGRES_USER', 'seachatuser')
 db_password = os.getenv('POSTGRES_PASSWORD', 'securepassword')
-db_host = os.getenv('POSTGRES_HOST', 'postgres')
+db_host = os.getenv('POSTGRES_HOST', 'localhost')
+#db_host = 'localhost'
 db_port = os.getenv('POSTGRES_PORT', '5432')
 db_name = os.getenv('POSTGRES_DB', 'seachat')
 
