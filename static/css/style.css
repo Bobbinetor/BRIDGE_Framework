@@ -26,8 +26,7 @@
 body {
     background-color: var(--white-blue);
     color: #333;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
 }
 
 button {
@@ -649,7 +648,7 @@ button:disabled {
     min-height: 100vh;
     background: linear-gradient(135deg, var(--deep-blue), var(--medium-blue));
     position: relative;
-    overflow: hidden;
+    padding: 40px 0;
 }
 
 .auth-card {
@@ -661,6 +660,8 @@ button:disabled {
     padding: 30px;
     z-index: 10;
     position: relative;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .auth-header {
@@ -768,7 +769,7 @@ button:disabled {
 }
 
 .auth-background {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
@@ -903,4 +904,50 @@ button:disabled {
 .sidebar-collapsed + .chat-container {
     margin-left: 60px;
     width: calc(100% - 60px);
+}
+
+/* Form elements for profile completion */
+select {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+    background-color: white;
+}
+
+select:focus {
+    border-color: var(--medium-blue);
+    outline: none;
+}
+
+.radio-group, .checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 5px;
+}
+
+@media (max-width: 480px) {
+    .checkbox-group, .radio-group {
+        grid-template-columns: 1fr;
+    }
+}
+
+input[type="radio"], input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+input[type="date"] {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+}
+
+input[type="date"]:focus {
+    border-color: var(--medium-blue);
+    outline: none;
 }
