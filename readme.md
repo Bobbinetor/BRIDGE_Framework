@@ -1,184 +1,243 @@
-# BRIDGE Project Web Application
+# BRIDGE Framework
 
-## Overview
+## Panoramica
 
-The BRIDGE Project is an interactive web application that facilitates communication with an AI assistant through a chat interface. This application utilizes a Flask backend, PostgreSQL database, and integrates with the Ollama API to generate AI-powered responses using the Gemma 3 language model.
+BRIDGE è un'applicazione web interattiva che facilita la comunicazione con un assistente AI attraverso un'interfaccia di chat sia testuale che vocale. L'applicazione utilizza un backend Flask, un database PostgreSQL, integra Ollama API per generare risposte basate sul modello linguistico Gemma 3, e Kokoro-FastAPI per la sintesi vocale (TTS).
 
-## Features
+## Funzionalità
 
-- **User Authentication System**
-  - Secure registration and login functionality
-  - Password hashing for enhanced security
-  - Session management with Flask-Login
+- **Sistema di Autenticazione**
+  - Registrazione e login sicuri
+  - Hashing delle password per maggiore sicurezza
+  - Gestione delle sessioni con Flask-Login
 
-- **Chat Management**
-  - Creation of new chat sessions
-  - Persistent storage of conversation history
-  - Ability to rename and delete chat sessions
+- **Gestione delle Chat**
+  - Creazione di nuove sessioni di chat
+  - Archiviazione permanente della cronologia delle conversazioni
+  - Possibilità di rinominare ed eliminare le sessioni di chat
 
-- **AI Integration**
-  - Real-time communication with Gemma 3 (1B parameter) model
-  - Context-aware conversations
-  - Automatic chat title generation based on initial messages
+- **Integrazione AI**
+  - Comunicazione in tempo reale con il modello Gemma 3 (1B parametri)
+  - Conversazioni contestuali
+  - Generazione automatica del titolo della chat basata sui messaggi iniziali
 
-- **Containerized Architecture**
-  - PostgreSQL database in a Docker container
-  - pgAdmin interface for database management
-  - Environment variable configuration for flexible deployment
+- **Modalità Vocale**
+  - Riconoscimento vocale tramite Web Speech API del browser
+  - Sintesi vocale (TTS) tramite Kokoro-FastAPI
+  - Comunicazione bidirezionale tramite WebSockets
 
-## Technical Architecture
+- **Architettura Containerizzata**
+  - Database PostgreSQL in un container Docker
+  - Interfaccia pgAdmin per la gestione del database
+  - Kokoro-FastAPI in container Docker per la sintesi vocale
+  - Configurazione tramite variabili d'ambiente per deployment flessibile
 
-The application follows a modern web application architecture:
+## Architettura Tecnica
 
-- **Backend**: Flask framework with Python 3
+L'applicazione segue un'architettura moderna:
+
+- **Backend**: Framework Flask con Python 3
 - **Database**: PostgreSQL 14
 - **ORM**: SQLAlchemy
-- **Authentication**: Flask-Login
-- **AI Integration**: Ollama API with Gemma 3:1B model
-- **Containerization**: Docker and Docker Compose
+- **Autenticazione**: Flask-Login
+- **AI**: Ollama API con modello Gemma 3:1B
+- **Comunicazione in tempo reale**: Flask-SocketIO e Socket.IO
+- **Riconoscimento vocale**: Web Speech API (lato browser)
+- **Sintesi vocale**: Kokoro-FastAPI (server TTS)
+- **Containerizzazione**: Docker e Docker Compose
 
-### Database Schema
+### Schema del Database
 
-The application uses three primary models:
-1. **User**: Stores user credentials and authentication information
-2. **Chat**: Represents chat sessions belonging to users
-3. **Message**: Contains individual messages within chats, identifying both user and AI responses
+L'applicazione utilizza tre modelli principali:
+1. **User**: Memorizza credenziali e informazioni di autenticazione
+2. **Chat**: Rappresenta le sessioni di chat appartenenti agli utenti
+3. **Message**: Contiene i singoli messaggi all'interno delle chat, identificando sia le risposte dell'utente che dell'AI
 
-## Prerequisites
+## Prerequisiti
 
-- Docker and Docker Compose
-- Python 3.8 or higher
-- Ollama running locally with the Gemma 3:1B model installed
+- Docker e Docker Compose
+- Python 3.8 o superiore
+- Ollama in esecuzione localmente con il modello Gemma 3:1B installato
+- Un browser moderno che supporti Web Speech API (Chrome o Edge consigliati)
 
-## Installation and Setup
+## Installazione e Configurazione
 
-1. **Clone the repository**
+1. **Clona il repository e il repository di Kokoro-FastAPI**
    ```bash
-   git clone [repository-url]
-   cd bridge-project
+   git clone [repository-url] bridge-framework
+   cd bridge-framework
+   git clone https://github.com/remsky/Kokoro-FastAPI.git
    ```
 
-2. **Configure environment variables**
-   - Copy the example .env file and modify as needed:
+2. **Avvia il container Docker di Kokoro-FastAPI**
+   ```bash
+   cd Kokoro-FastAPI/docker/cpu
+   docker compose up -d
+   cd ../../../
+   ```
+
+3. **Configura le variabili d'ambiente**
+   - Copia il file .env di esempio e modificalo secondo le tue esigenze:
    ```bash
    cp .env.example .env
    ```
 
-3. **Start the Docker containers**
+4. **Avvia i container Docker per PostgreSQL**
    ```bash
    docker-compose up -d
    ```
 
-4. **Install Python dependencies**
+5. **Attiva l'ambiente virtuale e installa le dipendenze Python**
    ```bash
+   python -m venv myenv
+   source myenv/bin/activate  # su Windows: myenv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-5. **Run the Flask application**
+6. **Avvia Ollama e carica il modello Gemma**
+   ```bash
+   ollama pull gemma3:1b
+   ollama run gemma3:1b
+   ```
+
+7. **Avvia l'applicazione Flask**
    ```bash
    python app.py
    ```
 
-6. **Access the application**
-   - Web application: http://localhost:5000
-   - pgAdmin: http://localhost:5050 (login with admin@example.com / pgadminpassword)
+8. **Accedi all'applicazione**
+   - Applicazione web: http://localhost:5000
+   - pgAdmin: http://localhost:5050 (login con admin@example.com / pgadminpassword)
+   - API Kokoro: http://localhost:8880 (interfaccia Swagger per il test)
 
-## Environment Variables
+## Utilizzo della Modalità Vocale
 
-| Variable | Description | Default Value |
+La modalità vocale utilizza due componenti principali:
+1. **Web Speech API** nel browser per il riconoscimento vocale (STT)
+2. **Kokoro-FastAPI** sul server per la sintesi vocale (TTS)
+
+Per utilizzare la modalità vocale:
+1. Accedi all'applicazione e seleziona o crea una chat
+2. Clicca sul pulsante del microfono nell'area di input
+3. Parla chiaramente (preferibilmente in italiano)
+4. Il testo riconosciuto verrà inviato automaticamente all'AI
+5. La risposta dell'AI verrà visualizzata nella chat e riprodotta automaticamente come audio
+
+**Nota**: Il riconoscimento vocale funziona meglio con browser come Chrome o Edge. Firefox ha un supporto limitato.
+
+## Variabili d'Ambiente
+
+| Variabile | Descrizione | Valore Predefinito |
 |----------|-------------|---------------|
-| POSTGRES_USER | PostgreSQL username | seachatuser |
-| POSTGRES_PASSWORD | PostgreSQL password | securepassword |
-| POSTGRES_DB | PostgreSQL database name | seachat |
-| POSTGRES_HOST | PostgreSQL host address | localhost |
-| POSTGRES_PORT | PostgreSQL port | 5432 |
-| FLASK_SECRET_KEY | Secret key for Flask sessions | your-secret-key-change-this-in-production |
-| FLASK_DEBUG | Enable debug mode | True |
-| OLLAMA_API_URL | URL for Ollama API | http://localhost:11434/api/generate |
+| POSTGRES_USER | Username PostgreSQL | seachatuser |
+| POSTGRES_PASSWORD | Password PostgreSQL | securepassword |
+| POSTGRES_DB | Nome database PostgreSQL | seachat |
+| POSTGRES_HOST | Indirizzo host PostgreSQL | localhost |
+| POSTGRES_PORT | Porta PostgreSQL | 5432 |
+| FLASK_SECRET_KEY | Chiave segreta per le sessioni Flask | your-secret-key-change-this-in-production |
+| FLASK_DEBUG | Abilita modalità debug | True |
+| OLLAMA_API_URL | URL per l'API Ollama | http://localhost:11434/api/generate |
+| KOKORO_API_URL | URL per l'API Kokoro | http://localhost:8880 |
 
-## Usage
+## API Endpoint
 
-### User Registration and Login
+### Autenticazione
+- `GET/POST /login` - Login utente
+- `GET/POST /register` - Registrazione utente
+- `GET/POST /verify-otp` - Verifica OTP
+- `GET/POST /complete-profile` - Completamento profilo
+- `GET /logout` - Logout utente
 
-1. Navigate to `/register` to create a new account
-2. Use the `/login` endpoint with your credentials to access the application
+### Gestione Chat
+- `GET /api/chats` - Recupera tutte le chat utente
+- `POST /api/chats` - Crea una nuova chat
+- `GET /api/chats/<chat_id>` - Recupera una chat specifica con i messaggi
+- `DELETE /api/chats/<chat_id>` - Elimina una chat specifica
+- `POST /api/chats/<chat_id>/rename` - Rinomina una chat specifica
 
-### Creating and Managing Chats
+### Gestione Messaggi
+- `POST /api/chats/<chat_id>/messages` - Invia un messaggio e ottieni la risposta AI
+- `DELETE /api/chats/<chat_id>/messages/<message_id>` - Elimina un messaggio specifico
 
-1. From the main interface, create a new chat session
-2. Enter messages to communicate with the AI assistant
-3. View, rename, or delete chats from the chat management interface
+### Interazione Vocale
+- WebSocket comunicazione bidirezionale tramite Socket.IO
+- Eventi WebSocket per il controllo della modalità vocale
+- Elaborazione dei messaggi trascritti e risposte vocali
 
-## API Endpoints
+## Configurazione Docker
 
-### Authentication
-- `GET/POST /login` - User login
-- `GET/POST /register` - User registration
-- `GET /logout` - User logout
-
-### Chat Management
-- `GET /api/chats` - Retrieve all user chats
-- `POST /api/chats` - Create a new chat
-- `GET /api/chats/<chat_id>` - Retrieve a specific chat with messages
-- `DELETE /api/chats/<chat_id>` - Delete a specific chat
-- `POST /api/chats/<chat_id>/rename` - Rename a specific chat
-
-### Message Handling
-- `POST /api/chats/<chat_id>/messages` - Send a message and get AI response
-- `DELETE /api/chats/<chat_id>/messages/<message_id>` - Delete a specific message
-
-## Docker Configuration
-
-The application uses Docker Compose with the following services:
+L'applicazione utilizza Docker Compose con i seguenti servizi:
 
 ### PostgreSQL
-- Image: postgres:14
-- Exposed port: 5432
-- Volume: postgres_data for persistent storage
+- Immagine: postgres:14
+- Porta esposta: 5432
+- Volume: postgres_data per archiviazione persistente
 
 ### pgAdmin
-- Image: dpage/pgadmin4
-- Exposed port: 5050
-- Default credentials: admin@example.com / pgadminpassword
+- Immagine: dpage/pgadmin4
+- Porta esposta: 5050
+- Credenziali predefinite: admin@example.com / pgadminpassword
 
-## Dependencies
+### Kokoro-FastAPI (Servizio TTS)
+- Immagine: remsky/kokoro:latest-cpu
+- Porta esposta: 8880
+- Interfaccia API compatibile con OpenAI
+
+## Dipendenze
 
 - Flask 2.3.3
 - Flask-SQLAlchemy 3.1.1
 - Flask-Login 0.6.3
+- Flask-SocketIO 5.3.6 (per comunicazione WebSocket)
 - Requests 2.31.0
 - Werkzeug 2.3.7
 - psycopg2-binary 2.9.9
 - python-dotenv 1.0.0
+- python-socketio 5.11.2
 
-## Development
+## Risoluzione dei Problemi
 
-To run the application in development mode:
+### Kokoro-FastAPI
+- Se riscontri errori con la sintesi vocale, verifica che il container Kokoro-FastAPI sia in esecuzione: `docker ps | grep kokoro`
+- Controlla i log del container: `docker logs [container-id]`
+- Verifica che l'API sia accessibile: http://localhost:8880/docs
+
+### Ollama
+- Assicurati che Ollama sia in esecuzione: `ps aux | grep ollama`
+- Verifica che il modello Gemma 3:1B sia installato: `ollama list`
+- Controlla la disponibilità dell'API: `curl http://localhost:11434/api/tags`
+
+### Riconoscimento Vocale
+- Se il riconoscimento vocale non funziona, assicurati di utilizzare un browser supportato (preferibilmente Chrome)
+- Concedi i permessi per l'accesso al microfono quando richiesto
+- Verifica che non ci siano problemi con il microfono nelle impostazioni del sistema
+
+## Sviluppo
+
+Per eseguire l'applicazione in modalità sviluppo:
 
 ```bash
 export FLASK_DEBUG=True
 python app.py
 ```
 
-## Ollama Setup
+## Sicurezza e Considerazioni
 
-Ensure Ollama is installed and the Gemma 3:1B model is available:
+- Modifica le credenziali predefinite in produzione
+- Aggiorna la chiave segreta di Flask con un valore forte e casuale
+- Considera l'implementazione di un limite di frequenza per gli endpoint API
+- Rivedi le impostazioni di sicurezza di PostgreSQL prima del deployment
 
-```bash
-ollama pull gemma3:1b
-```
+## Note sui Branch
 
-## Security Considerations
+Il progetto include diversi branch per funzionalità specifiche:
+- `main`: Branch principale con la versione stabile dell'applicazione
+- `alfredo`: Branch con l'implementazione della modalità vocale
 
-- Change the default credentials in production
-- Update the Flask secret key with a strong, random value
-- Consider implementing rate limiting for API endpoints
-- Review PostgreSQL security settings before deployment
+## Licenza
 
-## License
+[Specifica le informazioni sulla licenza qui]
 
-[Specify your license information here]
+## Contatti
 
-## Contact
-
-[Provide contact information for project maintainers]
+[Fornisci informazioni di contatto per i responsabili del progetto]
