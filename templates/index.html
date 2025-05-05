@@ -70,6 +70,9 @@
                 <button type="submit" id="send-btn" disabled>
                     <i class="fas fa-paper-plane"></i>
                 </button>
+                <button id="voice-btn" class="action-btn" title="Voice Mode">
+                    <i class="fas fa-microphone"></i>
+                </button>
             </form>
         </div>
     </div>
@@ -103,5 +106,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% endblock %}

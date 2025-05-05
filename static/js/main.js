@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentChatTitle = document.getElementById('current-chat-title');
     const renameChatBtn = document.getElementById('rename-chat-btn');
     const deleteChatBtn = document.getElementById('delete-chat-btn');
+    const voiceBtn = document.getElementById('voice-btn');
     
     const renameModal = document.getElementById('rename-modal');
     const newTitleInput = document.getElementById('new-title-input');
@@ -25,20 +26,153 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentChatId = null;
     let chats = [];
     let isProcessing = false;
-    
+    let mediaRecorder = null;
+    let isRecording = false; // Track recording state
+    let audioContext = null; // For playing received audio
+    let audioSource = null; // For managing audio playback
+    let socket = null; // WebSocket connection
+    let speechRecognition = null; // For speech recognition
+
     // Initialize app
     function init() {
         fetchChats();
         setupEventListeners();
         adjustTextareaHeight();
+        document.body.addEventListener('click', initAudioContext, { once: true });
+        connectWebSocket(); // Establish WebSocket connection
+    }
+
+    function initAudioContext() {
+        if (!audioContext) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log("AudioContext initialized.");
+            } catch (e) {
+                console.error("Error initializing AudioContext:", e);
+                alert("Audio playback might not work in this browser.");
+            }
+        }
     }
     
+    // Establish WebSocket Connection
+    function connectWebSocket() {
+        socket = io();
+
+        socket.on('connect', () => {
+            console.log('WebSocket connected:', socket.id);
+            // Initialize speech recognition after socket connection
+            initSpeechRecognition();
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('WebSocket disconnected:', reason);
+            isRecording = false;
+            updateVoiceModeUI();
+            alert('Lost connection to the server. Please refresh the page.');
+        });
+
+        socket.on('voice_started', (data) => {
+            console.log('Server ready for audio:', data.message);
+        });
+
+        socket.on('processing_voice', (data) => {
+            console.log('Server processing voice:', data.message);
+            showProcessingIndicator(data.message || 'Processing voice...');
+        });
+
+        socket.on('transcript_result', (data) => {
+            console.log('Transcript:', data.transcript);
+        });
+
+        socket.on('new_message', (message) => {
+            console.log('New message received:', message);
+            renderMessage(message);
+            scrollToBottom();
+        });
+
+        socket.on('audio_response', (data) => {
+            console.log(`Received audio response: ${data.audio.byteLength} bytes, type: ${data.mime_type}`);
+            hideProcessingIndicator();
+            const audioBlob = new Blob([data.audio], { type: data.mime_type });
+            playAudioBlob(audioBlob);
+        });
+
+        socket.on('voice_interaction_complete', (data) => {
+            console.log('Voice interaction complete:', data.message);
+            hideProcessingIndicator();
+        });
+
+        socket.on('voice_error', (data) => {
+            console.error('Voice Error:', data.error);
+            hideProcessingIndicator();
+            renderSystemMessage(`Voice Error: ${data.error}`, 'error');
+            if (isRecording) {
+                isRecording = false;
+                updateVoiceModeUI();
+            }
+        });
+    }
+
+    // Initialize Web Speech API recognition
+    function initSpeechRecognition() {
+        // Check if browser supports speech recognition
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.error("Speech recognition not supported in this browser");
+            alert("Il tuo browser non supporta il riconoscimento vocale. Prova con Chrome o Edge.");
+            return;
+        }
+
+        // Create speech recognition object
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        speechRecognition = new SpeechRecognition();
+        
+        // Configure speech recognition
+        speechRecognition.lang = 'it-IT'; // Set to Italian
+        speechRecognition.continuous = false; // Stop after one utterance
+        speechRecognition.interimResults = false; // We want only final results
+        
+        // Handle recognition results
+        speechRecognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            console.log("Speech recognized:", transcript);
+            
+            // If we're in a voice interaction (button is active), send the transcript
+            if (isRecording && currentChatId && socket && socket.connected) {
+                // Instead of collecting audio chunks, send the transcript directly
+                socket.emit('voice_transcript', { 
+                    chat_id: currentChatId,
+                    transcript: transcript
+                });
+                
+                // Show processing indicator
+                showProcessingIndicator("Elaborazione della risposta...");
+            }
+        };
+        
+        // Handle speech recognition errors
+        speechRecognition.onerror = function(event) {
+            console.error("Speech recognition error:", event.error);
+            if (isRecording) {
+                renderSystemMessage(`Errore di riconoscimento vocale: ${event.error}`, 'error');
+                isRecording = false;
+                updateVoiceModeUI();
+            }
+        };
+        
+        // When recognition stops (either by timeout or end of speech)
+        speechRecognition.onend = function() {
+            console.log("Speech recognition ended");
+            isRecording = false;
+            updateVoiceModeUI();
+        };
+        
+        console.log("Speech recognition initialized");
+    }
+
     // Set up all event listeners
     function setupEventListeners() {
-        // New chat button
         newChatBtn.addEventListener('click', createNewChat);
         
-        // Message form submission
         messageForm.addEventListener('submit', function(e) {
             e.preventDefault();
             if (messageInput.value.trim() !== '' && !isProcessing) {
@@ -46,19 +180,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Auto-resize textarea
         messageInput.addEventListener('input', adjustTextareaHeight);
         
-        // Double Enter detection for message input
         let lastEnterPress = 0;
-        const DOUBLE_ENTER_THRESHOLD = 500; // ms
+        const DOUBLE_ENTER_THRESHOLD = 500;
         
         messageInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 const currentTime = new Date().getTime();
                 
                 if (currentTime - lastEnterPress < DOUBLE_ENTER_THRESHOLD) {
-                    // Double Enter detected
                     e.preventDefault();
                     if (messageInput.value.trim() !== '' && !isProcessing) {
                         sendMessage(messageInput.value.trim());
@@ -69,7 +200,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Rename chat
         renameChatBtn.addEventListener('click', openRenameModal);
         renameForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -81,15 +211,164 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         cancelRenameBtn.addEventListener('click', closeRenameModal);
         
-        // Delete chat
         deleteChatBtn.addEventListener('click', openConfirmModal);
         confirmDeleteBtn.addEventListener('click', function() {
             deleteChat(currentChatId);
             closeConfirmModal();
         });
         cancelDeleteBtn.addEventListener('click', closeConfirmModal);
+
+        voiceBtn.addEventListener('click', toggleRecording);
     }
-    
+
+    // Toggle Recording (Modified for Web Speech API)
+    async function toggleRecording() {
+        if (!socket || !socket.connected) {
+            alert('Non connesso al server. Attendere o ricaricare la pagina.');
+            return;
+        }
+        
+        initAudioContext(); // Ensure AudioContext is ready for playback
+
+        if (isRecording) {
+            // --- Stop Recording ---
+            console.log('Stopping speech recognition...');
+            if (speechRecognition) {
+                try {
+                    speechRecognition.stop();
+                } catch (e) {
+                    console.error("Error stopping speech recognition:", e);
+                }
+            }
+            isRecording = false;
+            updateVoiceModeUI();
+        } else {
+            // --- Start Recording ---
+            if (!currentChatId) {
+                alert('Seleziona o crea una nuova chat prima.');
+                return;
+            }
+            if (isProcessing) {
+                console.warn('Impossibile avviare la registrazione: elaborazione di una richiesta precedente in corso.');
+                return;
+            }
+            
+            // Ensure speech recognition is initialized
+            if (!speechRecognition) {
+                initSpeechRecognition();
+                if (!speechRecognition) {
+                    alert("Impossibile inizializzare il riconoscimento vocale.");
+                    return;
+                }
+            }
+            
+            // Signal to server that we're starting a voice interaction
+            socket.emit('start_voice_interaction', { chat_id: currentChatId });
+            
+            try {
+                // Start the speech recognition
+                speechRecognition.start();
+                isRecording = true;
+                updateVoiceModeUI();
+                console.log('Speech recognition started');
+            } catch (err) {
+                console.error('Error starting speech recognition:', err);
+                alert(`Impossibile avviare il riconoscimento vocale: ${err.message}`);
+                isRecording = false;
+                updateVoiceModeUI();
+            }
+        }
+    }
+
+    // Update UI based on recording state
+    function updateVoiceModeUI() {
+        if (isRecording) {
+            voiceBtn.classList.add('recording');
+            voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        } else {
+            voiceBtn.classList.remove('recording');
+            voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+    }
+
+    // Function to play received audio blob
+    function playAudioBlob(blob) {
+        if (!audioContext) {
+            console.error("AudioContext not available to play audio.");
+            initAudioContext();
+            if (!audioContext) {
+                 alert("Could not initialize audio playback. Please interact with the page first.");
+                 return;
+            }
+        }
+        const url = URL.createObjectURL(blob);
+
+        if (audioSource) {
+            try {
+                if (audioSource.stop) audioSource.stop();
+            } catch (e) { }
+            audioSource = null;
+        }
+
+        const audio = new Audio(url);
+        audio.onended = () => {
+            console.log("Audio playback finished.");
+            URL.revokeObjectURL(url);
+        };
+        audio.onerror = (e) => {
+            console.error("Error playing audio:", e);
+            URL.revokeObjectURL(url);
+            renderSystemMessage("Error playing audio response.", "error");
+        };
+        audio.play().catch(e => {
+             console.error("Audio play failed:", e);
+             renderSystemMessage(`Audio playback failed: ${e.message}`, "error");
+        });
+    }
+
+    // Helper to show a processing indicator
+    function showProcessingIndicator(text = "Processing...") {
+        let indicator = document.getElementById('processing-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'processing-indicator';
+            indicator.className = 'message system processing';
+            indicator.innerHTML = `
+                <div class="message-content">
+                     <div class="typing-indicator" style="justify-content: center;">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <p style="text-align: center; margin-top: 5px;">${text}</p>
+                </div>`;
+            chatMessages.appendChild(indicator);
+        } else {
+            indicator.querySelector('p').textContent = text;
+            indicator.style.display = 'flex';
+        }
+        scrollToBottom();
+    }
+
+    // Helper to hide the processing indicator
+    function hideProcessingIndicator() {
+        const indicator = document.getElementById('processing-indicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+
+    // Render a system message
+    function renderSystemMessage(content, type = 'info') {
+        const messageElement = document.createElement('div');
+        messageElement.className = `message system ${type}`;
+        messageElement.innerHTML = `
+            <div class="message-content">
+                <p>${escapeHtml(content)}</p>
+            </div>
+        `;
+        chatMessages.appendChild(messageElement);
+        scrollToBottom();
+    }
+
     // Fetch all chats
     function fetchChats() {
         fetch('/api/chats')
@@ -146,11 +425,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function selectChat(chatId) {
         currentChatId = chatId;
         
-        // Fetch the complete chat with messages
         fetch(`/api/chats/${chatId}`)
             .then(response => response.json())
             .then(chat => {
-                // Update UI
                 renderChatList();
                 currentChatTitle.textContent = chat.title;
                 welcomeContainer.style.display = 'none';
@@ -160,10 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renameChatBtn.disabled = false;
                 deleteChatBtn.disabled = false;
                 
-                // Render messages
                 renderMessages(chat.messages);
-                
-                // Scroll to bottom
                 scrollToBottom();
             })
             .catch(error => console.error('Error fetching chat details:', error));
@@ -209,43 +483,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Format message content (handle markdown, code, etc.)
     function formatMessageContent(content) {
-        // Process code blocks with syntax highlighting
         content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, language, code) {
             const langClass = language ? ` class="language-${language}"` : '';
             return `<pre><code${langClass}>${escapeHtml(code)}</code></pre>`;
         });
         
-        // Convert inline code
         content = content.replace(/`([^`]+)`/g, function(match, code) {
             return `<code>${escapeHtml(code)}</code>`;
         });
         
-        // Handle headers
         content = content.replace(/^### (.*$)/gm, '<h3>$1</h3>');
         content = content.replace(/^## (.*$)/gm, '<h2>$1</h2>');
         content = content.replace(/^# (.*$)/gm, '<h1>$1</h1>');
         
-        // Handle lists
         content = content.replace(/^\s*\n\* (.*)/gm, '<ul>\n<li>$1</li>');
         content = content.replace(/^(\* )(.*)/gm, '<li>$2</li>');
         content = content.replace(/^\s*\n\d+\. (.*)/gm, '<ol>\n<li>$1</li>');
         content = content.replace(/^(\d+\. )(.*)/gm, '<li>$2</li>');
         
-        // Handle blockquotes
         content = content.replace(/^\> (.*$)/gm, '<blockquote>$1</blockquote>');
         
-        // Convert links
         content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, text, url) {
             return `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(text)}</a>`;
         });
         
-        // Handle emphasis (bold and italic)
         content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
         content = content.replace(/\_\_([^_]+)\_\_/g, '<strong>$1</strong>');
         content = content.replace(/\_([^_]+)\_/g, '<em>$1</em>');
         
-        // Handle paragraphs properly
         const paragraphs = content.split('\n\n');
         let processedContent = '';
         for (let i = 0; i < paragraphs.length; i++) {
@@ -261,7 +527,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Replace single newlines with <br> but only within paragraphs
         processedContent = processedContent.replace(/<p>(.*)\n(.*)<\/p>/g, '<p>$1<br>$2</p>');
         
         return processedContent;
@@ -287,18 +552,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Send a message
     function sendMessage(content) {
+        if (isRecording) {
+            alert("Please stop voice recording before sending a text message.");
+            return;
+        }
         if (!currentChatId) return;
+        if (isProcessing) {
+            console.warn("Cannot send text message while processing voice.");
+            return;
+        }
         
-        // Disable input while processing
         isProcessing = true;
         messageInput.disabled = true;
         sendBtn.disabled = true;
         
-        // Clear input
         messageInput.value = '';
         adjustTextareaHeight();
         
-        // Show user message immediately (optimistic UI)
         const tempUserMsg = {
             id: 'temp-' + Date.now(),
             role: 'user',
@@ -308,7 +578,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderMessage(tempUserMsg);
         scrollToBottom();
         
-        // Show typing indicator
         const typingIndicator = document.createElement('div');
         typingIndicator.className = 'message assistant typing';
         typingIndicator.innerHTML = `
@@ -326,7 +595,6 @@ document.addEventListener('DOMContentLoaded', function() {
         chatMessages.appendChild(typingIndicator);
         scrollToBottom();
         
-        // Send to API
         fetch(`/api/chats/${currentChatId}/messages`, {
             method: 'POST',
             headers: {
@@ -338,10 +606,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            // Remove typing indicator
             typingIndicator.remove();
             
-            // Update chat in local state if title was changed
             const chat = chats.find(c => c.id === currentChatId);
             if (chat && data.chat_title) {
                 chat.title = data.chat_title;
@@ -349,16 +615,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderChatList();
             }
             
-            // Render the AI response
             renderMessage(data.ai_message);
             scrollToBottom();
         })
         .catch(error => {
             console.error('Error sending message:', error);
-            // Remove typing indicator
             typingIndicator.remove();
             
-            // Show error message
             const errorMsg = document.createElement('div');
             errorMsg.className = 'message system error';
             errorMsg.innerHTML = `
@@ -370,7 +633,6 @@ document.addEventListener('DOMContentLoaded', function() {
             scrollToBottom();
         })
         .finally(() => {
-            // Re-enable input
             isProcessing = false;
             messageInput.disabled = false;
             sendBtn.disabled = false;
@@ -388,7 +650,6 @@ document.addEventListener('DOMContentLoaded', function() {
             chats = chats.filter(chat => chat.id !== chatId);
             currentChatId = null;
             
-            // Update UI
             renderChatList();
             resetChatView();
         })
@@ -475,7 +736,6 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleSidebarBtn.addEventListener('click', function() {
         sidebar.classList.toggle('sidebar-collapsed');
         
-        // Update toggle button icon
         const icon = toggleSidebarBtn.querySelector('i');
         if (sidebar.classList.contains('sidebar-collapsed')) {
             icon.classList.remove('fa-bars');

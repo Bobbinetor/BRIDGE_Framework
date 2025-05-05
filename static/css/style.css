@@ -951,3 +951,22 @@ input[type="date"]:focus {
     border-color: var(--medium-blue);
     outline: none;
 }
+
+/* Style for voice button when recording */
+.action-btn.recording {
+    background-color: #dc3545; /* Red */
+    color: white;
+}
+.action-btn.recording:hover {
+    background-color: #c82333; /* Darker red */
+}
+
+/* Style for voice button when voice mode is active but not recording */
+.action-btn.voice-mode-active {
+    background-color: var(--seafoam); /* Use seafoam color */
+    color: var(--deep-blue);
+    border: 1px solid var(--medium-blue); /* Add a border to indicate active state */
+}
+.action-btn.voice-mode-active:hover {
+    background-color: var(--light-blue);
+}
