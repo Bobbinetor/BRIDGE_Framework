@@ -57,8 +57,263 @@ button:disabled {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: width 0.3s ease;
 }
 
+/* Sidebar Tabs */
+.sidebar-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 5px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.sidebar-tab i {
+    font-size: 1.2rem;
+}
+
+.sidebar-tab:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-tab.active {
+    color: white;
+    border-bottom: 2px solid var(--light-blue);
+}
+
+/* Sidebar Content */
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-container {
+    display: none;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.tab-container.active {
+    display: block;
+}
+
+.sidebar-section-header {
+    padding: 15px 15px 5px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+}
+
+.sidebar-section-header h3 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--light-blue);
+}
+
+/* Empty states */
+.empty-list-message {
+    padding: 15px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* Settings tab styles */
+.settings-list, .profile-info {
+    padding: 0 15px 15px;
+}
+
+.setting-item, .profile-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Toggle switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--light-blue);
+}
+
+input:checked + .slider:before {
+    transform: translateX(18px);
+}
+
+.slider.round {
+    border-radius: 22px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Selects in sidebar */
+.setting-item select {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: none;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    width: 140px;
+}
+
+.setting-item select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--light-blue);
+}
+
+/* Profile section */
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.profile-item i {
+    color: var(--light-blue);
+    width: 20px;
+    text-align: center;
+}
+
+.edit-profile-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    color: var(--light-blue);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.edit-profile-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+}
+
+/* Help tab */
+.help-content {
+    padding: 0 15px 15px;
+}
+
+.help-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.help-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.help-item i {
+    color: var(--light-blue);
+    font-size: 1.5rem;
+    margin-top: 3px;
+}
+
+.help-item h4 {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    color: white;
+}
+
+.help-item p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 5px;
+}
+
+/* Collapsed sidebar adjustments */
+.sidebar-collapsed .sidebar-tab span {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-tabs {
+    flex-direction: column;
+    border-bottom: none;
+}
+
+.sidebar-collapsed .sidebar-tab {
+    padding: 12px 5px;
+}
+
+.sidebar-collapsed .sidebar-section-header h3 {
+    display: none;
+}
+
+/* Sidebar Header */
 .sidebar-header {
     display: flex;
     justify-content: space-between;
@@ -103,17 +358,16 @@ button:disabled {
     padding: 10px;
 }
 
+/* Chat Item Styling with Favorite Button */
 .chat-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 10px 15px;
     margin-bottom: 5px;
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: background-color 0.2s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .chat-item:hover {
@@ -125,9 +379,43 @@ button:disabled {
     font-weight: 600;
 }
 
-.chat-item i {
+.chat-item-content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-item-content i {
     margin-right: 10px;
     color: var(--light-blue);
+}
+
+/* Favorite Button Styling */
+.favorite-btn {
+    color: var(--light-blue);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.favorite-btn:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.favorite-btn i.fa-star {
+    color: #FFD700; /* Gold color for active star */
 }
 
 /* Main Chat Container */
@@ -300,6 +588,40 @@ button:disabled {
     margin-top: 5px;
     color: #888;
     text-align: right;
+}
+
+/* Improved error message styling */
+.message.system.error .message-content {
+    background-color: #ffebee;
+    color: #b71c1c;
+    border-left: 4px solid #f44336;
+}
+
+.error-details {
+    font-family: monospace;
+    font-size: 0.8rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.retry-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+    background-color: #d32f2f;
 }
 
 /* Input Area */
@@ -950,4 +1272,212 @@ input[type="date"] {
 input[type="date"]:focus {
     border-color: var(--medium-blue);
     outline: none;
+}
+
+/* Calendar Tab Styles */
+.calendar-view {
+    padding: 15px;
+}
+
+.month-selector {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+#current-month {
+    font-weight: 600;
+    color: white;
+}
+
+.month-nav {
+    background: none;
+    border: none;
+    color: var(--light-blue);
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.month-nav:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 20px;
+}
+
+.calendar-grid .weekday {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--light-blue);
+    padding: 5px;
+    font-weight: 600;
+}
+
+.calendar-grid .day {
+    text-align: center;
+    padding: 8px 0;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.calendar-grid .day:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.calendar-grid .day.today {
+    background-color: var(--light-blue);
+    color: var(--deep-blue);
+    font-weight: 600;
+}
+
+.calendar-grid .day.has-events {
+    position: relative;
+}
+
+.calendar-grid .day.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--coral);
+}
+
+.calendar-grid .day.other-month {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.events-list {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.events-list h4 {
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    color: var(--light-blue);
+}
+
+.event-item {
+    display: flex;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.event-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.event-time {
+    width: 70px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+}
+
+.event-details {
+    flex: 1;
+}
+
+.event-title {
+    font-weight: 600;
+    color: white;
+    margin-bottom: 3px;
+    font-size: 0.9rem;
+}
+
+.event-location {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+}
+
+.event-location i {
+    margin-right: 5px;
+}
+
+/* Calendar Tab Styles - Updated */
+.events-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.add-event-btn {
+    background-color: var(--light-blue);
+    color: var(--deep-blue);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.add-event-btn:hover {
+    background-color: var(--seafoam);
+    transform: scale(1.05);
+}
+
+/* Event form styles */
+#event-form .form-group {
+    margin-bottom: 15px;
+}
+
+#event-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--deep-blue);
+}
+
+#event-form input,
+#event-form select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+#event-form input:focus,
+#event-form select:focus {
+    border-color: var(--medium-blue);
+    outline: none;
+}
+
+/* Event type indicators */
+.event-item.meeting .event-title::before {
+    content: '📅 ';
+}
+
+.event-item.deadline .event-title::before {
+    content: '⏰ ';
+}
+
+.event-item.reminder .event-title::before {
+    content: '📝 ';
+}
+
+.event-item.other .event-title::before {
+    content: '📌 ';
 }

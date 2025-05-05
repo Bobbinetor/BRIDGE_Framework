@@ -24,8 +24,72 @@
                 <i class="fas fa-sign-out-alt"></i>
             </a>
         </div>
-        <div class="chat-list" id="chat-list">
-            <!-- Chat items will be inserted here by JavaScript -->
+        
+        <!-- Simplified sidebar navigation tabs - only Chats and Calendar -->
+        <div class="sidebar-tabs">
+            <button class="sidebar-tab active" data-target="chat-list-container">
+                <i class="fas fa-comments"></i>
+                <span>Chats</span>
+            </button>
+            <button class="sidebar-tab" data-target="calendar-container">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Calendar</span>
+            </button>
+        </div>
+        
+        <!-- Tab content containers -->
+        <div class="sidebar-content">
+            <!-- Chats tab -->
+            <div class="tab-container active" id="chat-list-container">
+                <div class="sidebar-section-header">
+                    <h3>Recent Chats</h3>
+                </div>
+                <div class="chat-list" id="chat-list">
+                    <!-- Chat items will be inserted here by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Calendar tab -->
+            <div class="tab-container" id="calendar-container">
+                <div class="sidebar-section-header">
+                    <h3>Upcoming Events</h3>
+                </div>
+                <div class="calendar-view">
+                    <div class="month-selector">
+                        <button class="month-nav" id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                        <span id="current-month">April 2024</span>
+                        <button class="month-nav" id="next-month"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- Calendar will be populated by JavaScript -->
+                    </div>
+                    <div class="events-list">
+                        <div class="events-header">
+                            <h4>Today's Events</h4>
+                            <button id="add-event-btn" class="add-event-btn" title="Add Event">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div id="events-container">
+                            <!-- Events will be populated by JavaScript -->
+                            <div class="event-item">
+                                <div class="event-time">10:00 AM</div>
+                                <div class="event-details">
+                                    <div class="event-title">Team Meeting</div>
+                                    <div class="event-location"><i class="fas fa-video"></i> Online</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-time">2:30 PM</div>
+                                <div class="event-details">
+                                    <div class="event-title">Project Review</div>
+                                    <div class="event-location"><i class="fas fa-map-marker-alt"></i> Conference Room</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -98,6 +162,44 @@
             <button type="button" id="cancel-delete-btn">Cancel</button>
             <button type="button" id="confirm-delete-btn">Delete</button>
         </div>
+    </div>
+</div>
+
+<!-- Event creation modal -->
+<div class="modal" id="event-modal">
+    <div class="modal-content">
+        <h3>Add New Event</h3>
+        <form id="event-form">
+            <div class="form-group">
+                <label for="event-title">Event Title</label>
+                <input type="text" id="event-title" placeholder="Enter event title" required>
+            </div>
+            <div class="form-group">
+                <label for="event-date">Date</label>
+                <input type="date" id="event-date" required>
+            </div>
+            <div class="form-group">
+                <label for="event-time">Time</label>
+                <input type="time" id="event-time" required>
+            </div>
+            <div class="form-group">
+                <label for="event-location">Location</label>
+                <input type="text" id="event-location" placeholder="Enter location">
+            </div>
+            <div class="form-group">
+                <label for="event-type">Type</label>
+                <select id="event-type">
+                    <option value="meeting">Meeting</option>
+                    <option value="deadline">Deadline</option>
+                    <option value="reminder">Reminder</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancel-event-btn">Cancel</button>
+                <button type="submit">Save Event</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

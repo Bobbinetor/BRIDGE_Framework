@@ -38,11 +38,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // New chat button
         newChatBtn.addEventListener('click', createNewChat);
         
-        // Message form submission
+        // Message form submission - update this to ensure it works
         messageForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Form submitted, input value:', messageInput.value.trim()); // Debug log
+            console.log('Is processing?', isProcessing); // Debug log
+            console.log('Input disabled?', messageInput.disabled); // Debug log
+            
             if (messageInput.value.trim() !== '' && !isProcessing) {
                 sendMessage(messageInput.value.trim());
+            } else {
+                console.log('Message not sent: Empty input or already processing'); // Debug log
             }
         });
         
@@ -110,20 +116,59 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Get current favorites
+        let favorites = JSON.parse(localStorage.getItem('favoriteChats') || '[]');
+        
         chats.forEach(chat => {
             const chatElement = document.createElement('div');
             chatElement.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+            chatElement.setAttribute('data-chat-id', chat.id);
+            
+            const isFavorite = favorites.includes(chat.id);
+            
             chatElement.innerHTML = `
-                <i class="fas fa-comment-dots"></i>
-                <span>${chat.title}</span>
+                <div class="chat-item-content">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>${chat.title}</span>
+                </div>
+                <button class="favorite-btn" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                    <i class="fas ${isFavorite ? 'fa-star' : 'fa-star-o'}"></i>
+                </button>
             `;
-            chatElement.addEventListener('click', () => selectChat(chat.id));
+            
+            // Add click handler for the chat item (excluding the favorite button)
+            const chatContent = chatElement.querySelector('.chat-item-content');
+            if (chatContent) {
+                chatContent.addEventListener('click', () => selectChat(chat.id));
+            }
+            
+            // Add click handler for the favorite button
+            const favoriteBtn = chatElement.querySelector('.favorite-btn');
+            if (favoriteBtn) {
+                favoriteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent triggering chat selection
+                    const isNowFavorite = toggleFavorite(chat.id);
+                    
+                    // Update icon
+                    this.innerHTML = `<i class="fas ${isNowFavorite ? 'fa-star' : 'fa-star-o'}"></i>`;
+                    this.title = isNowFavorite ? 'Remove from favorites' : 'Add to favorites';
+                    
+                    // Update favorites list
+                    updateFavoritesList();
+                });
+            }
+            
             chatList.appendChild(chatElement);
         });
     }
     
-    // Create a new chat
+    // Create a new chat with better error handling
     function createNewChat() {
+        console.log('Creating new chat'); // Debug log
+        
+        // Disable the new chat button during creation
+        newChatBtn.disabled = true;
+        
         fetch('/api/chats', {
             method: 'POST',
             headers: {
@@ -133,40 +178,103 @@ document.addEventListener('DOMContentLoaded', function() {
                 title: 'New Chat'
             }),
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(`Failed to create chat: ${err.error || response.statusText}`);
+                });
+            }
+            return response.json();
+        })
         .then(chat => {
+            console.log('New chat created:', chat); // Debug log
             chats.push(chat);
             renderChatList();
-            selectChat(chat.id);
+            
+            // Ensure we select the chat after creation and a short delay
+            // This gives the backend time to properly store the chat
+            setTimeout(() => selectChat(chat.id), 100);
         })
-        .catch(error => console.error('Error creating chat:', error));
+        .catch(error => {
+            console.error('Error creating chat:', error);
+            alert(`Failed to create new chat: ${error.message}. Please try again.`);
+        })
+        .finally(() => {
+            // Re-enable the new chat button
+            newChatBtn.disabled = false;
+        });
     }
     
     // Select a chat
     function selectChat(chatId) {
+        console.log(`Selecting chat with ID: ${chatId}`); // Debug log
         currentChatId = chatId;
         
         // Fetch the complete chat with messages
         fetch(`/api/chats/${chatId}`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(`Server error: ${err.error || err.details || response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
             .then(chat => {
+                console.log('Chat data retrieved successfully:', chat); // Debug log
+                
                 // Update UI
                 renderChatList();
                 currentChatTitle.textContent = chat.title;
                 welcomeContainer.style.display = 'none';
                 chatMessages.style.display = 'flex';
+                
+                // Ensure the input and buttons are enabled
                 messageInput.disabled = false;
                 sendBtn.disabled = false;
                 renameChatBtn.disabled = false;
                 deleteChatBtn.disabled = false;
                 
+                // Set focus to the message input for immediate typing
+                setTimeout(() => messageInput.focus(), 100);
+                
                 // Render messages
-                renderMessages(chat.messages);
+                renderMessages(chat.messages || []);
                 
                 // Scroll to bottom
                 scrollToBottom();
             })
-            .catch(error => console.error('Error fetching chat details:', error));
+            .catch(error => {
+                console.error('Error fetching chat details:', error);
+                
+                // Show more detailed error message to user
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'message system error';
+                errorMsg.innerHTML = `
+                    <div class="message-content">
+                        <p>Error: Failed to load chat. Please try again.</p>
+                        <p class="error-details">${error.message}</p>
+                        <button class="retry-btn">Retry</button>
+                    </div>
+                `;
+                chatMessages.innerHTML = '';
+                chatMessages.appendChild(errorMsg);
+                chatMessages.style.display = 'flex';
+                welcomeContainer.style.display = 'none';
+                
+                // Add event listener to the retry button instead of using inline onclick
+                const retryBtn = errorMsg.querySelector('.retry-btn');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', function() {
+                        selectChat(chatId);
+                    });
+                }
+                
+                // Keep the UI consistent - enable action buttons
+                renameChatBtn.disabled = false;
+                deleteChatBtn.disabled = false;
+            });
     }
     
     // Render messages for the selected chat
@@ -461,6 +569,114 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmModal.classList.remove('active');
     }
     
+    // Enhanced sidebar functionality
+    const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+    const tabContainers = document.querySelectorAll('.tab-container');
+    
+    // Tab switching functionality
+    sidebarTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs and containers
+            sidebarTabs.forEach(t => t.classList.remove('active'));
+            tabContainers.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Show corresponding container
+            const targetId = this.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+    
+    // Theme toggle functionality
+    const themeSwitch = document.getElementById('theme-switch');
+    if (themeSwitch) {
+        // Check if user has a saved preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeSwitch.checked = true;
+        }
+        
+        themeSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                document.body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    }
+    
+    // Favorite chat functionality
+    function toggleFavorite(chatId) {
+        // Get current favorites from localStorage
+        let favorites = JSON.parse(localStorage.getItem('favoriteChats') || '[]');
+        
+        if (favorites.includes(chatId)) {
+            // Remove from favorites
+            favorites = favorites.filter(id => id !== chatId);
+            localStorage.setItem('favoriteChats', JSON.stringify(favorites));
+            return false;
+        } else {
+            // Add to favorites
+            favorites.push(chatId);
+            localStorage.setItem('favoriteChats', JSON.stringify(favorites));
+            return true;
+        }
+    }
+    
+    // Update the favorites list in the sidebar
+    function updateFavoritesList() {
+        const favoriteList = document.getElementById('favorite-list');
+        if (!favoriteList) return;
+        
+        // Get current favorites
+        let favorites = JSON.parse(localStorage.getItem('favoriteChats') || '[]');
+        
+        // Clear the list
+        favoriteList.innerHTML = '';
+        
+        // If no favorites, show message
+        if (favorites.length === 0) {
+            favoriteList.innerHTML = '<p class="empty-list-message">No favorite chats yet. Star a chat to add it here.</p>';
+            return;
+        }
+        
+        // Add each favorite chat
+        favorites.forEach(favoriteId => {
+            const chat = chats.find(c => c.id === favoriteId);
+            if (chat) {
+                const chatElement = document.createElement('div');
+                chatElement.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                chatElement.setAttribute('data-chat-id', chat.id);
+                chatElement.innerHTML = `
+                    <i class="fas fa-star"></i>
+                    <span>${chat.title}</span>
+                `;
+                chatElement.addEventListener('click', () => selectChat(chat.id));
+                favoriteList.appendChild(chatElement);
+            }
+        });
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+N for new chat
+        if (e.ctrlKey && e.key === 'n') {
+            e.preventDefault();
+            createNewChat();
+        }
+        
+        // Escape to close modals
+        if (e.key === 'Escape') {
+            closeRenameModal();
+            closeConfirmModal();
+        }
+    });
+    
     // Initialize the app
     init();
 });
@@ -485,4 +701,356 @@ document.addEventListener('DOMContentLoaded', function() {
             icon.classList.add('fa-bars');
         }
     });
+});
+
+// Calendar functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Calendar variables
+    const calendarGrid = document.getElementById('calendar-grid');
+    const currentMonthElement = document.getElementById('current-month');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const addEventBtn = document.getElementById('add-event-btn');
+    const eventModal = document.getElementById('event-modal');
+    const eventForm = document.getElementById('event-form');
+    const cancelEventBtn = document.getElementById('cancel-event-btn');
+    const eventDateInput = document.getElementById('event-date');
+    
+    let currentDate = new Date();
+    let currentMonth = currentDate.getMonth();
+    let currentYear = currentDate.getFullYear();
+    let selectedDate = new Date();
+    
+    // Initialize calendar if elements exist
+    if (calendarGrid && currentMonthElement) {
+        renderCalendar();
+        
+        // Event listeners for month navigation
+        if (prevMonthBtn) {
+            prevMonthBtn.addEventListener('click', function() {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                renderCalendar();
+            });
+        }
+        
+        if (nextMonthBtn) {
+            nextMonthBtn.addEventListener('click', function() {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                renderCalendar();
+            });
+        }
+        
+        // Event listeners for event management
+        if (addEventBtn) {
+            addEventBtn.addEventListener('click', openEventModal);
+        }
+        
+        if (cancelEventBtn) {
+            cancelEventBtn.addEventListener('click', closeEventModal);
+        }
+        
+        if (eventForm) {
+            eventForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveEvent();
+            });
+        }
+    }
+    
+    // Render the calendar for the current month - FIXED VERSION
+    function renderCalendar() {
+        // Update the month display
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+        currentMonthElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        
+        // Clear grid
+        calendarGrid.innerHTML = '';
+        
+        // Add weekday headers
+        const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        weekdays.forEach(day => {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'weekday';
+            dayElement.textContent = day;
+            calendarGrid.appendChild(dayElement);
+        });
+        
+        // Get the first day of the month
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const startingDay = firstDay.getDay(); // Day of week (0-6)
+        
+        // Get the last day of the month
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        const totalDays = lastDay.getDate();
+        
+        // Get the last day of the previous month
+        const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+        
+        // Variables to track the current date
+        const today = new Date();
+        const isCurrentMonth = today.getMonth() === currentMonth && today.getFullYear() === currentYear;
+        
+        // Create the grid cells
+        let dayCount = 1;
+        let nextMonthDay = 1;
+        
+        // Calculate how many rows we actually need
+        // Most months need 5 rows, some need 6
+        const daysNeeded = startingDay + totalDays;
+        const rowsNeeded = Math.ceil(daysNeeded / 7);
+        const totalCells = rowsNeeded * 7;
+        
+        // Create calendar cells
+        for (let i = 0; i < totalCells; i++) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'day';
+            
+            // Previous month days
+            if (i < startingDay) {
+                const prevMonthDate = prevMonthLastDay - (startingDay - i - 1);
+                dayElement.textContent = prevMonthDate;
+                dayElement.classList.add('other-month');
+                
+                // Set date attribute for event handling
+                const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+                const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+                dayElement.setAttribute('data-date', `${prevYear}-${(prevMonth + 1).toString().padStart(2, '0')}-${prevMonthDate.toString().padStart(2, '0')}`);
+            } 
+            // Current month days
+            else if (dayCount <= totalDays) {
+                dayElement.textContent = dayCount;
+                
+                // Set date attribute for event handling
+                const currentMonthStr = (currentMonth + 1).toString().padStart(2, '0');
+                const currentDayStr = dayCount.toString().padStart(2, '0');
+                dayElement.setAttribute('data-date', `${currentYear}-${currentMonthStr}-${currentDayStr}`);
+                
+                // Check if this day has events
+                const dateString = `${currentYear}-${currentMonthStr}-${currentDayStr}`;
+                const hasEvents = checkForEvents(dateString);
+                
+                // Highlight today
+                if (isCurrentMonth && dayCount === today.getDate()) {
+                    dayElement.classList.add('today');
+                }
+                
+                // Mark days with events
+                if (hasEvents) {
+                    dayElement.classList.add('has-events');
+                }
+                
+                dayCount++;
+            } 
+            // Next month days
+            else if (i < totalCells) {
+                dayElement.textContent = nextMonthDay;
+                dayElement.classList.add('other-month');
+                
+                // Set date attribute for event handling
+                const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+                const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+                dayElement.setAttribute('data-date', `${nextYear}-${(nextMonth + 1).toString().padStart(2, '0')}-${nextMonthDay.toString().padStart(2, '0')}`);
+                
+                nextMonthDay++;
+            }
+            
+            // Add click event to view day's events
+            dayElement.addEventListener('click', function() {
+                const dateAttr = this.getAttribute('data-date');
+                selectedDate = new Date(dateAttr);
+                updateEventsForDay(dateAttr);
+                
+                // Remove active class from all days
+                document.querySelectorAll('.day').forEach(day => day.classList.remove('active'));
+                // Add active class to selected day
+                this.classList.add('active');
+                
+                // Update event date input for new events
+                if (eventDateInput) {
+                    eventDateInput.value = dateAttr;
+                }
+            });
+            
+            calendarGrid.appendChild(dayElement);
+        }
+        
+        // Initial events display
+        updateEventsForDay(formatDateForAttribute(today));
+    }
+    
+    // Helper function to format date as YYYY-MM-DD
+    function formatDateForAttribute(date) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Check if a date has events
+    function checkForEvents(dateString) {
+        const events = getEventsFromStorage();
+        return events.some(event => event.date === dateString);
+    }
+    
+    // Update the events list for a selected day
+    function updateEventsForDay(dateString) {
+        const eventsListTitle = document.querySelector('.events-list h4');
+        if (eventsListTitle) {
+            const displayDate = new Date(dateString);
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                                "July", "August", "September", "October", "November", "December"];
+            eventsListTitle.textContent = `Events for ${monthNames[displayDate.getMonth()]} ${displayDate.getDate()}, ${displayDate.getFullYear()}`;
+        }
+        
+        // Get events for this day from storage
+        const events = getEventsFromStorage().filter(event => event.date === dateString);
+        
+        // Display events
+        const eventsContainer = document.getElementById('events-container');
+        if (eventsContainer) {
+            // Clear previous events
+            eventsContainer.innerHTML = '';
+            
+            if (events.length === 0) {
+                // No events for this day
+                const noEvents = document.createElement('div');
+                noEvents.className = 'no-events';
+                noEvents.textContent = 'No events scheduled for this day.';
+                noEvents.style.color = 'rgba(255, 255, 255, 0.5)';
+                noEvents.style.fontStyle = 'italic';
+                noEvents.style.textAlign = 'center';
+                noEvents.style.padding = '15px 0';
+                eventsContainer.appendChild(noEvents);
+            } else {
+                // Sort events by time
+                events.sort((a, b) => a.time.localeCompare(b.time));
+                
+                // Display each event
+                events.forEach(event => {
+                    const eventItem = document.createElement('div');
+                    eventItem.className = `event-item ${event.type}`;
+                    
+                    // Format time for display
+                    const timeDisplay = formatTimeForDisplay(event.time);
+                    
+                    // Icon based on event type
+                    let icon = 'fas fa-calendar-alt';
+                    if (event.type === 'meeting') icon = 'fas fa-users';
+                    else if (event.type === 'deadline') icon = 'fas fa-clock';
+                    else if (event.type === 'reminder') icon = 'fas fa-bell';
+                    
+                    eventItem.innerHTML = `
+                        <div class="event-time">${timeDisplay}</div>
+                        <div class="event-details">
+                            <div class="event-title">${event.title}</div>
+                            <div class="event-location"><i class="${icon}"></i> ${event.location || 'No location'}</div>
+                        </div>
+                        <button class="delete-event-btn" data-id="${event.id}" title="Delete Event">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    
+                    eventsContainer.appendChild(eventItem);
+                    
+                    // Add delete event listener
+                    const deleteBtn = eventItem.querySelector('.delete-event-btn');
+                    if (deleteBtn) {
+                        deleteBtn.addEventListener('click', function() {
+                            const eventId = this.getAttribute('data-id');
+                            deleteEvent(eventId);
+                        });
+                    }
+                });
+            }
+        }
+    }
+    
+    // Format time from 24h to 12h format
+    function formatTimeForDisplay(time24h) {
+        const [hours, minutes] = time24h.split(':');
+        let period = 'AM';
+        let hour = parseInt(hours, 10);
+        
+        if (hour >= 12) {
+            period = 'PM';
+            if (hour > 12) hour -= 12;
+        }
+        
+        if (hour === 0) hour = 12;
+        
+        return `${hour}:${minutes} ${period}`;
+    }
+    
+    // Event Modal Functions
+    function openEventModal() {
+        // Set default date to selected date
+        if (eventDateInput) {
+            eventDateInput.value = formatDateForAttribute(selectedDate);
+        }
+        
+        eventModal.classList.add('active');
+    }
+    
+    function closeEventModal() {
+        eventModal.classList.remove('active');
+        eventForm.reset();
+    }
+    
+    // Save a new event
+    function saveEvent() {
+        const eventTitle = document.getElementById('event-title').value;
+        const eventDate = document.getElementById('event-date').value;
+        const eventTime = document.getElementById('event-time').value;
+        const eventLocation = document.getElementById('event-location').value;
+        const eventType = document.getElementById('event-type').value;
+        
+        const newEvent = {
+            id: Date.now().toString(),
+            title: eventTitle,
+            date: eventDate,
+            time: eventTime,
+            location: eventLocation,
+            type: eventType
+        };
+        
+        // Add to storage
+        const events = getEventsFromStorage();
+        events.push(newEvent);
+        localStorage.setItem('calendarEvents', JSON.stringify(events));
+        
+        // Close modal and update UI
+        closeEventModal();
+        renderCalendar(); // Re-render to show event indicators
+        updateEventsForDay(eventDate);
+    }
+    
+    // Delete an event
+    function deleteEvent(eventId) {
+        let events = getEventsFromStorage();
+        const eventToDelete = events.find(e => e.id === eventId);
+        const dateToUpdate = eventToDelete ? eventToDelete.date : null;
+        
+        events = events.filter(event => event.id !== eventId);
+        localStorage.setItem('calendarEvents', JSON.stringify(events));
+        
+        // Update UI
+        renderCalendar();
+        if (dateToUpdate) {
+            updateEventsForDay(dateToUpdate);
+        }
+    }
+    
+    // Get events from localStorage
+    function getEventsFromStorage() {
+        return JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    }
 });
