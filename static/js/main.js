@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const renameChatBtn = document.getElementById('rename-chat-btn');
     const deleteChatBtn = document.getElementById('delete-chat-btn');
     const voiceBtn = document.getElementById('voice-btn');
+    const languageSelector = document.getElementById('language-selector');
     
     const renameModal = document.getElementById('rename-modal');
     const newTitleInput = document.getElementById('new-title-input');
@@ -32,9 +33,17 @@ document.addEventListener('DOMContentLoaded', function() {
     let audioSource = null; // For managing audio playback
     let socket = null; // WebSocket connection
     let speechRecognition = null; // For speech recognition
+    let currentLanguage = 'en'; // Default language is English
 
     // Initialize app
     function init() {
+        // Set the language selector to the default value or saved preference
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (savedLanguage) {
+            currentLanguage = savedLanguage;
+            languageSelector.value = savedLanguage;
+        }
+        
         fetchChats();
         setupEventListeners();
         adjustTextareaHeight();
@@ -141,7 +150,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Instead of collecting audio chunks, send the transcript directly
                 socket.emit('voice_transcript', { 
                     chat_id: currentChatId,
-                    transcript: transcript
+                    transcript: transcript,
+                    language: currentLanguage
                 });
                 
                 // Show processing indicator
@@ -219,6 +229,59 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelDeleteBtn.addEventListener('click', closeConfirmModal);
 
         voiceBtn.addEventListener('click', toggleRecording);
+
+        // Add event listener for language selector
+        languageSelector.addEventListener('change', function() {
+            currentLanguage = languageSelector.value;
+            localStorage.setItem('preferredLanguage', currentLanguage);
+            console.log('Language changed to:', currentLanguage);
+            
+            // Update speech recognition language for voice interactions
+            if (speechRecognition) {
+                switch(currentLanguage) {
+                    case 'en': speechRecognition.lang = 'en-US'; break;
+                    case 'it': speechRecognition.lang = 'it-IT'; break;
+                    case 'fr': speechRecognition.lang = 'fr-FR'; break;
+                    case 'es': speechRecognition.lang = 'es-ES'; break;
+                    case 'de': speechRecognition.lang = 'de-DE'; break;
+                    default: speechRecognition.lang = 'en-US';
+                }
+                console.log('Speech recognition language set to:', speechRecognition.lang);
+            }
+            
+            // Notifica all'utente che la lingua è cambiata 
+            const languageNames = {
+                'en': 'English',
+                'it': 'Italiano',
+                'fr': 'Français',
+                'es': 'Español',
+                'de': 'Deutsch'
+            };
+            
+            // Mostra un messaggio di sistema che indica il cambio lingua
+            renderSystemMessage(`Language changed to: ${languageNames[currentLanguage]}`, 'info');
+            
+            // Se c'è una chat attiva, aggiungiamo una nota di sistema invisibile per segnalare al modello il cambio di lingua
+            if (currentChatId) {
+                // Invia una notifica al server per informare che la lingua è cambiata
+                fetch(`/api/chats/${currentChatId}/set-language`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        language: currentLanguage
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Language preference updated on server:', data);
+                })
+                .catch(error => {
+                    console.error('Error updating language preference:', error);
+                });
+            }
+        });
     }
 
     // Toggle Recording (Modified for Web Speech API)
@@ -601,7 +664,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                message: content
+                message: content,
+                language: currentLanguage
             }),
         })
         .then(response => response.json())

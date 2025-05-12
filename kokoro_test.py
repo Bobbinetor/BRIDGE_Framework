@@ -45,29 +45,48 @@ def process_audio(audio_file_storage):
     # Return a fixed message for testing - in production, replace with actual STT service
     return "Questo è un messaggio di test generato automaticamente. La trascrizione vocale non è disponibile con l'API Kokoro attuale."
 
-# --- TTS Function - No Changes Needed ---
-def kokoro_tts(text_to_speak):
+# --- TTS Function - Updated to Support Multiple Languages ---
+def kokoro_tts(text_to_speak, language_code=None):
     """Sends text to Kokoro TTS API and returns audio data and mime type.
 
     Args:
         text_to_speak: The string of text to convert to speech.
+        language_code: The language code ('en', 'it', etc.) to determine the appropriate voice.
 
     Returns:
         A tuple (audio_data_bytes, mime_type_string), or raises an exception on error.
     """
-    print(f"Sending text to Kokoro TTS: '{text_to_speak[:50]}...'")
+    print(f"Sending text to Kokoro TTS: '{text_to_speak[:50]}...' (Language: {language_code})")
+    
+    # Map language codes to appropriate voices
+    # Based on the Kokoro API available voices format:
+    # - First letter indicates language/accent: a=American, e=English, i=Italian, etc.
+    # - Second letter indicates gender: m=male, f=female
+    # - Text after underscore is the voice name
+    voice_mapping = {
+        'en': 'am_michael',  # American English male
+        'it': 'im_nicola',   # Italian male 
+        'fr': 'ef_dora',     # English female (as fallback since no French voices available)
+        'es': 'if_sara',     # Italian female (as fallback since no Spanish voices available)
+        'de': 'em_alex',     # English male (as fallback since no German voices available)
+        None: DEFAULT_TTS_VOICE
+    }
+    
+    # Select voice based on language code
+    voice = voice_mapping.get(language_code, DEFAULT_TTS_VOICE)
+    
     kokoro_headers = {
         "Content-Type": "application/json",
         "Accept": f"audio/{DEFAULT_TTS_FORMAT}"
     }
     kokoro_payload = {
-        "model": "kokoro",  # Cambiato da "kokoro-tts" a "kokoro" come indicato nella documentazione
+        "model": "kokoro",
         "input": text_to_speak,
-        "voice": DEFAULT_TTS_VOICE,
+        "voice": voice,
         "response_format": DEFAULT_TTS_FORMAT,
-        "speed": 1,  # Aggiunto parametro speed
-        "stream": False,  # Non vogliamo lo streaming per questa implementazione
-        "return_download_link": False  # Non abbiamo bisogno del link di download
+        "speed": 1,
+        "stream": False,
+        "return_download_link": False
     }
 
     try:
@@ -81,7 +100,7 @@ def kokoro_tts(text_to_speak):
         # Verifica se il content_type corrisponde a uno dei formati accettati
         if content_type and any(content_type.startswith(mime) for mime in expected_mime_types):
             audio_data = response.content
-            print(f"Received {len(audio_data)} bytes of audio data ({content_type}).")
+            print(f"Received {len(audio_data)} bytes of audio data ({content_type}) using voice: {voice}")
             # Ritorna sempre il content type ricevuto dal server, non quello che ci aspettavamo
             return audio_data, content_type
         else:

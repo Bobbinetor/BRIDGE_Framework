@@ -154,8 +154,10 @@ button:disabled {
     color: var(--deep-blue);
 }
 
+/* Header actions with language selector */
 .header-actions {
     display: flex;
+    align-items: center;
     gap: 10px;
 }
 
@@ -969,4 +971,30 @@ input[type="date"]:focus {
 }
 .action-btn.voice-mode-active:hover {
     background-color: var(--light-blue);
+}
+
+/* Language Selector */
+.language-selector {
+    margin-right: 15px;
+}
+
+.language-selector select {
+    padding: 6px 10px;
+    border-radius: var(--border-radius);
+    border: 1px solid #e0e0e0;
+    background-color: white;
+    color: var(--deep-blue);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.language-selector select:hover {
+    border-color: var(--medium-blue);
+}
+
+.language-selector select:focus {
+    outline: none;
+    border-color: var(--medium-blue);
+    box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.2);
 }

@@ -20,6 +20,10 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
+# Email configuration
+GMAIL_USERNAME = os.getenv('GMAIL_USERNAME')
+GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD')
+
 # Database configuration from environment variables
 db_user = os.getenv('POSTGRES_USER', 'seachatuser')
 db_password = os.getenv('POSTGRES_PASSWORD', 'securepassword')
@@ -30,6 +34,10 @@ db_name = os.getenv('POSTGRES_DB', 'seachat')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+
+# Check if email configuration is available
+if not GMAIL_USERNAME or not GMAIL_PASSWORD:
+    app.logger.warning("GMAIL_USERNAME or GMAIL_PASSWORD not set in environment variables. Email features will not work.")
 
 db = SQLAlchemy(app)
 
@@ -50,6 +58,18 @@ KOKORO_BASE_URL = os.getenv("KOKORO_API_URL", "http://localhost:8880")
 KOKORO_TTS_URL = f"{KOKORO_BASE_URL}/v1/audio/speech"
 DEFAULT_TTS_VOICE = "af_bella"
 DEFAULT_TTS_FORMAT = "mp3"
+
+# Function to get language-specific prompt instructions
+def get_language_prompt(language_code):
+    """Generate language-specific instructions for the LLM."""
+    prompts = {
+        'en': "You MUST ALWAYS respond ONLY in English, regardless of what language the user inputs in. If the user asks a question in another language, translate it mentally but ALWAYS respond in English only.\n",
+        'it': "Devi SEMPRE rispondere SOLO in italiano, indipendentemente dalla lingua in cui l'utente scrive. Se l'utente pone una domanda in un'altra lingua, traducila mentalmente ma rispondi SEMPRE e SOLO in italiano.\n",
+        'fr': "Vous DEVEZ TOUJOURS répondre UNIQUEMENT en français, quelle que soit la langue utilisée par l'utilisateur. Si l'utilisateur pose une question dans une autre langue, traduisez-la mentalement mais répondez TOUJOURS et UNIQUEMENT en français.\n",
+        'es': "DEBES SIEMPRE responder SOLO en español, independientemente del idioma en que escriba el usuario. Si el usuario hace una pregunta en otro idioma, tradúcela mentalmente pero responde SIEMPRE y ÚNICAMENTE en español.\n",
+        'de': "Du MUSST IMMER NUR auf Deutsch antworten, unabhängig davon, in welcher Sprache der Benutzer schreibt. Wenn der Benutzer eine Frage in einer anderen Sprache stellt, übersetze sie gedanklich, aber antworte IMMER und NUR auf Deutsch.\n"
+    }
+    return prompts.get(language_code, prompts['en'])  # Default to English if language not supported
 
 # Import STT/TTS functions
 from kokoro_test import process_audio, kokoro_tts
@@ -75,7 +95,7 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(password, password)
+        return check_password_hash(self.password_hash, password)
 
 class Chat(db.Model):
     id = db.Column(db.String(36), primary_key=True)
@@ -363,6 +383,7 @@ def send_message(chat_id):
     if not chat:
         return jsonify({'error': 'Chat not found'}), 404
     user_message = request.json.get('message', '')
+    language = request.json.get('language', 'en')  # Get language preference, default to English
     if not user_message:
         return jsonify({'error': 'Message is required'}), 400
     message_id = str(uuid.uuid4())
@@ -374,7 +395,10 @@ def send_message(chat_id):
     )
     db.session.add(user_message_obj)
     db.session.commit()
-    conversation_context = "The following is a conversation with an AI assistant named Gemma. The assistant is helpful, friendly, and knowledgeable.\n\n"
+    
+    # Create the conversation context with language instructions
+    conversation_context = get_language_prompt(language)
+    conversation_context += "The following is a conversation with an AI assistant named Gemma. The assistant is helpful, friendly, and knowledgeable.\n\n"
     for message in chat.messages:
         role_prefix = "Human: " if message.role == 'user' else "Gemma: "
         conversation_context += f"{role_prefix}{message.content}\n"
@@ -450,6 +474,48 @@ def rename_chat(chat_id):
         'id': chat.id,
         'title': chat.title,
         'created_at': chat.created_at.isoformat()
+    })
+
+@app.route('/api/chats/<chat_id>/set-language', methods=['POST'])
+@login_required
+def set_chat_language(chat_id):
+    """Imposta la preferenza di lingua per una chat specifica."""
+    chat = Chat.query.filter_by(id=chat_id, user_id=current_user.id).first()
+    if not chat:
+        return jsonify({'error': 'Chat not found'}), 404
+        
+    language = request.json.get('language', 'en')
+    
+    # Se necessario, si potrebbe aggiungere una colonna 'language' alla tabella Chat
+    # per salvare permanentemente la lingua preferita per ogni chat
+    # Per ora, memorizziamo la preferenza nella sessione utente
+    if 'chat_languages' not in session:
+        session['chat_languages'] = {}
+    
+    session['chat_languages'][chat_id] = language
+    session.modified = True
+    
+    # Aggiungiamo un messaggio di sistema che indica il cambio di lingua
+    # Questo messaggio sarà visibile solo al modello, non all'utente
+    system_message = f"Language settings updated to: {language}. All future responses will be in this language."
+    message_id = str(uuid.uuid4())
+    
+    # Creiamo un messaggio di sistema invisibile che non verrà mostrato nel frontend
+    # ma che servirà come istruzione per il modello nelle prossime risposte
+    # Usato solo per il debug, commentarlo in produzione
+    # system_message_obj = Message(
+    #     id=message_id,
+    #     content=system_message,
+    #     role='system',
+    #     chat_id=chat.id
+    # )
+    # db.session.add(system_message_obj)
+    # db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'language': language,
+        'chat_id': chat_id
     })
 
 @socketio.on('connect')
@@ -546,11 +612,17 @@ def handle_stop_voice():
             'role': user_message_obj.role,
             'timestamp': user_message_obj.timestamp.isoformat()
         }, room=sid)
-        conversation_context = "The following is a conversation...\n\n"
+        
+        # Add language instructions to the conversation context
+        # Default to the user's preferred language from their profile, or English
+        language = current_user.preferred_language.lower() if current_user.preferred_language else 'en'
+        conversation_context = get_language_prompt(language)
+        conversation_context += "The following is a conversation...\n\n"
         for message in chat.messages:
             role_prefix = "Human: " if message.role == 'user' else "Gemma: "
             conversation_context += f"{role_prefix}{message.content}\n"
         conversation_context += "Gemma:"
+        
         response = requests.post(
             OLLAMA_API_URL,
             json={"model": "gemma3:1b", "prompt": conversation_context, "stream": False}
@@ -570,7 +642,7 @@ def handle_stop_voice():
             'role': ai_message_obj.role,
             'timestamp': ai_message_obj.timestamp.isoformat()
         }, room=sid)
-        audio_data, mime_type = kokoro_tts(ai_text_response)
+        audio_data, mime_type = kokoro_tts(ai_text_response, language)
         print(f"TTS Result for {sid}: {len(audio_data)} bytes, type: {mime_type}")
         emit('audio_response', {
             'audio': audio_data,
@@ -596,6 +668,7 @@ def handle_voice_transcript(data):
         
     chat_id = data.get('chat_id')
     transcript = data.get('transcript')
+    language = data.get('language', 'en')  # Get language preference, default to English
     user_id = current_user.id
     
     if not chat_id or not transcript:
@@ -627,8 +700,9 @@ def handle_voice_transcript(data):
             'timestamp': user_message_obj.timestamp.isoformat()
         }, room=sid)
         
-        # 3. Prepara il contesto della conversazione per l'AI
-        conversation_context = "The following is a conversation with an AI assistant named Gemma. The assistant is helpful, friendly, and knowledgeable.\n\n"
+        # 3. Prepara il contesto della conversazione per l'AI con le istruzioni sulla lingua
+        conversation_context = get_language_prompt(language)
+        conversation_context += "The following is a conversation with an AI assistant named Gemma. The assistant is helpful, friendly, and knowledgeable.\n\n"
         for message in chat.messages:
             role_prefix = "Human: " if message.role == 'user' else "Gemma: "
             conversation_context += f"{role_prefix}{message.content}\n"
@@ -664,7 +738,7 @@ def handle_voice_transcript(data):
         
         # 8. Genera audio dalla risposta AI e invialo
         try:
-            audio_data, mime_type = kokoro_tts(ai_text_response)
+            audio_data, mime_type = kokoro_tts(ai_text_response, language)
             print(f"TTS Result for {sid}: {len(audio_data)} bytes, type: {mime_type}")
             
             emit('audio_response', {

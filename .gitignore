@@ -4,3 +4,6 @@
 *.pyc
 *.pyo
 *.mp3
+
+/Kokoro-FastAPI
+/__pycache__/
