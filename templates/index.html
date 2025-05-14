@@ -2,6 +2,14 @@
 
 {% block content %}
 <div class="app-container">
+    <!-- Mobile sidebar toggle button - always visible on small screens -->
+    <button id="mobile-menu-toggle" class="mobile-menu-toggle" style="display: none;">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Sidebar overlay for mobile -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    
     <!-- Sidebar for chat navigation -->
     <div class="sidebar">
         <div class="sidebar-header">
@@ -26,6 +34,22 @@
         </div>
         <div class="chat-list" id="chat-list">
             <!-- Chat items will be inserted here by JavaScript -->
+        </div>
+        <!-- Monthly calendar in the sidebar -->
+        <div class="sidebar-calendar">
+            <div class="calendar-header">
+                <h4>Calendar</h4>
+                <button id="add-event-btn" title="Add event">
+                    <i class="fas fa-plus"></i> Add
+                </button>
+            </div>
+            <div id="calendar-month" class="calendar-container"></div>
+            <div class="events-list-container">
+                <div class="events-title" id="events-title"></div>
+                <ul id="events-list" class="events-list">
+                    <!-- Events will be rendered here -->
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -82,6 +106,7 @@
                 <button id="voice-btn" class="action-btn" title="Voice Mode">
                     <i class="fas fa-microphone"></i>
                 </button>
+                <!-- Stop audio button will be inserted via JavaScript -->
             </form>
         </div>
     </div>
@@ -112,9 +137,145 @@
         </div>
     </div>
 </div>
+
+<!-- Event modal -->
+<div class="modal" id="event-modal">
+    <div class="modal-content">
+        <h3>Add Event</h3>
+        <form id="event-form">
+            <div class="form-group">
+                <label for="event-title">Title</label>
+                <input type="text" id="event-title" placeholder="Enter event title" required>
+            </div>
+            <div class="form-group">
+                <label for="event-start">Start Date & Time</label>
+                <input type="text" id="event-start" class="flatpickr-input" placeholder="Select date and time" required>
+            </div>
+            <div class="form-group">
+                <label for="event-end">End Date & Time</label>
+                <input type="text" id="event-end" class="flatpickr-input" placeholder="Select date and time" required>
+            </div>
+            <div class="form-group">
+                <label for="event-location">Location</label>
+                <select id="event-location" required>
+                    <option value="" disabled selected>Select a city</option>
+                    <option value="Naples">Naples</option>
+                    <option value="Gdańsk">Gdańsk</option>
+                    <option value="Kiel">Kiel</option>
+                    <option value="Malta">Malta</option>
+                    <option value="Split">Split</option>
+                    <option value="Algarve">Algarve</option>
+                    <option value="Cádiz">Cádiz</option>
+                    <option value="Bodø">Bodø</option>
+                    <option value="Brest">Brest</option>
+                    <option value="Klaipeda">Klaipeda</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancel-event-btn">Cancel</button>
+                <button type="submit" class="primary-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker.min.css">
+<!-- Add Flatpickr for better date picker control -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    // Force English locale for the entire document and all inputs
+    document.documentElement.lang = 'en';
+    
+    // Initialize Flatpickr with English locale
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize custom date pickers with English locale
+        const dateConfig = {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            time_24hr: true,
+            locale: {
+                firstDayOfWeek: 1,
+                weekdays: {
+                    shorthand: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+                    longhand: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+                },
+                months: {
+                    shorthand: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                    longhand: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                },
+                rangeSeparator: " to ",
+                weekAbbreviation: "Wk",
+                scrollTitle: "Scroll to increment",
+                toggleTitle: "Click to toggle",
+                amPM: ["AM", "PM"],
+                yearAriaLabel: "Year",
+                monthAriaLabel: "Month",
+                hourAriaLabel: "Hour",
+                minuteAriaLabel: "Minute",
+                time_24hr: true
+            }
+        };
+        
+        // Initialize for event form
+        if (document.getElementById("event-start")) {
+            flatpickr("#event-start", dateConfig);
+        }
+        
+        if (document.getElementById("event-end")) {
+            flatpickr("#event-end", dateConfig);
+        }
+        
+        // Initialize appointment form too if needed
+        if (document.getElementById("appointment-start")) {
+            const appointmentStart = document.getElementById("appointment-start");
+            appointmentStart.type = "text";
+            appointmentStart.classList.add("flatpickr-input");
+            flatpickr("#appointment-start", dateConfig);
+        }
+        
+        if (document.getElementById("appointment-end")) {
+            const appointmentEnd = document.getElementById("appointment-end");
+            appointmentEnd.type = "text";
+            appointmentEnd.classList.add("flatpickr-input");
+            flatpickr("#appointment-end", dateConfig);
+        }
+        
+        // Debug script to help diagnose issues with the mobile sidebar
+        console.log('DOM fully loaded');
+        const mobileBtn = document.getElementById('mobile-menu-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        
+        // Adds a direct backup event listener
+        if (mobileBtn && sidebar) {
+            console.log('Mobile button found, adding backup handler');
+            mobileBtn.addEventListener('click', function(e) {
+                console.log('Direct click handler triggered');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Direct style manipulation as a backup
+                if (sidebar.style.left === '0px') {
+                    sidebar.style.left = '-280px';
+                    document.body.style.overflow = '';
+                } else {
+                    sidebar.style.left = '0';
+                    document.body.style.overflow = 'hidden';
+                }
+                
+                return false;
+            });
+        }
+        
+        // Test the media query from JavaScript
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        console.log('Media query says is mobile:', isMobile);
+        console.log('Current window width:', window.innerWidth);
+    });
+</script>
 {% endblock %}

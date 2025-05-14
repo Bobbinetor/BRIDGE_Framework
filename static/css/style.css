@@ -47,6 +47,8 @@ button:disabled {
     height: 100vh;
     overflow: hidden;
     background: linear-gradient(to bottom, var(--white-blue), var(--pale-blue));
+    position: relative;
+    transition: all 0.3s ease;
 }
 
 /* Sidebar Styles */
@@ -57,6 +59,12 @@ button:disabled {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.sidebar.active {
+    left: 0;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-header {
@@ -128,6 +136,772 @@ button:disabled {
 .chat-item i {
     margin-right: 10px;
     color: var(--light-blue);
+}
+
+/* Miglioramenti al calendario nella sidebar - FIX SFORMATTAZIONE */
+.sidebar-calendar {
+    padding: 12px 8px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    background: var(--deep-blue); /* Stesso colore della sidebar */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    max-width: 100%;
+    overflow: hidden; /* Impedisce che il contenuto esca */
+    position: relative;
+    z-index: 5;
+    padding-bottom: 15px !important; /* Add some padding at the bottom */
+}
+
+/* FIX COLORI CALENDARIO - Risoluzione problemi di visibilità */
+.datepicker {
+    width: 100% !important;
+    font-size: 0.85rem !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    color: #fff !important;
+}
+
+/* FIX BARRE BIANCHE NEL CALENDARIO */
+/* Corregge input di ricerca mese/anno e altre aree bianche */
+.datepicker-dropdown,
+.datepicker input,
+.datepicker .form-control,
+.datepicker input.datepicker-input {
+    background-color: var(--deep-blue) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+/* Colore placeholder negli input */
+.datepicker input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Controllo selezione mese/anno */
+.datepicker .datepicker-picker .datepicker-title select {
+    background-color: var(--deep-blue) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    padding: 2px !important;
+    margin: 0 2px !important;
+}
+
+/* Dropdown per selezione mese/anno */
+.datepicker .datepicker-dropdown {
+    background-color: var(--deep-blue) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Opzioni nei dropdown */
+.datepicker .datepicker-dropdown option {
+    background-color: var(--deep-blue) !important;
+    color: white !important;
+}
+
+/* Correzione per il contenitore input nella parte inferiore */
+.datepicker .datepicker-input-container input {
+    background-color: var(--deep-blue) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    width: 100% !important;
+}
+
+/* Rimuovere il bordo bianco dai contenitori nel calendario */
+.datepicker .datepicker-header,
+.datepicker .datepicker-footer,
+.datepicker .datepicker-title input,
+.datepicker-dropdown {
+    border: none !important;
+    background-color: transparent !important;
+}
+
+/* Input nella parte inferiore (se presente) */
+.appointments-list-container input {
+    background-color: var(--deep-blue) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    padding: 8px !important;
+    width: 100% !important;
+    border-radius: 4px !important;
+}
+
+/* Input nella parte inferiore (se presente) */
+.events-list-container input {
+    background-color: var(--deep-blue) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    padding: 8px !important;
+    width: 100% !important;
+    border-radius: 4px !important;
+}
+
+/* Correzione sfondo e colori della vista del calendario */
+.datepicker .datepicker-picker {
+    background: transparent !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.datepicker .datepicker-main {
+    background: transparent !important;
+    color: white !important;
+}
+
+.datepicker .datepicker-view {
+    background: transparent !important;
+    color: white !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+/* Stile per le intestazioni dei giorni della settimana */
+.datepicker .days-of-week {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    margin-bottom: 6px !important;
+}
+
+.datepicker .days-of-week span {
+    color: var(--seafoam) !important;
+    font-weight: bold !important;
+    font-size: 0.75rem !important;
+    text-align: center !important;
+    padding: 2px 0 !important;
+}
+
+/* Stile per i giorni del calendario */
+.datepicker .datepicker-grid {
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 2px !important;
+    width: 100% !important;
+}
+
+.datepicker .datepicker-cell {
+    color: white !important;
+    border-radius: 4px !important;
+    width: calc((100% / 7) - 2px) !important;
+    height: 30px !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    line-height: 30px !important;
+    text-align: center !important;
+    padding: 0 !important;
+    margin: 1px !important;
+    font-size: 0.8rem !important;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Giorni disabilitati (fuori dal mese corrente) */
+.datepicker .datepicker-cell.prev:not(.selected), 
+.datepicker .datepicker-cell.next:not(.selected) {
+    color: rgba(255, 255, 255, 0.3) !important;
+    background: transparent !important;
+}
+
+/* Giorno selezionato */
+.datepicker .datepicker-cell.selected,
+.datepicker .datepicker-cell.selected:hover {
+    background: var(--coral) !important;
+    color: white !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Giorno corrente */
+.datepicker .datepicker-cell.today {
+    border: 1px solid var(--seafoam) !important;
+    background: rgba(126, 235, 232, 0.2) !important;
+    color: white !important;
+}
+
+/* Effetto hover sui giorni */
+.datepicker .datepicker-cell:not(.disabled):hover {
+    background: var(--medium-blue) !important;
+    color: white !important;
+}
+
+/* Controlli per navigazione mese */
+.datepicker .datepicker-controls {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    background: transparent !important;
+    margin-bottom: 8px !important;
+}
+
+.datepicker .datepicker-header {
+    color: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Nascondi completamente la barra del titolo del datepicker */
+.datepicker .datepicker-picker .datepicker-title,
+.datepicker-title {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Rimuovi lo spazio extra che potrebbe essere allocato per il titolo */
+.datepicker .datepicker-header {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+.datepicker .datepicker-header .datepicker-title {
+    color: white !important;
+    font-weight: bold !important;
+    font-size: 0.9rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+.datepicker .datepicker-header .datepicker-title span {
+    color: white !important;
+    margin: 0 3px !important;
+}
+
+/* Bottoni di navigazione */
+.datepicker .datepicker-controls .button {
+    color: white !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 4px 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
+    transition: background 0.2s !important;
+}
+
+.datepicker .datepicker-controls .button:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--seafoam) !important;
+}
+
+/* Miglioramento contenitore appuntamenti */
+.appointments-list-container {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    margin-top: 5px !important;
+    max-height: 200px !important; /* Increased from 150px */
+    overflow-y: auto !important;
+}
+
+/* Miglioramento contenitore eventi */
+.events-list-container {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    margin-top: 5px !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+}
+
+/* Center the date text in appointments section */
+.appointments-title {
+    color: var(--light-blue) !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important; /* Increased font size for better visibility */
+    margin-bottom: 10px !important;
+    padding: 2px 0 !important;
+    text-align: center !important; /* Center the text */
+    width: 100% !important;
+    letter-spacing: 0.5px !important; /* Slightly improve readability */
+}
+
+/* Center the date text in events section */
+.events-title {
+    color: var(--light-blue) !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    margin-bottom: 10px !important;
+    padding: 2px 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+    letter-spacing: 0.5px !important;
+}
+
+.appointments-list {
+    list-style-type: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.events-list {
+    list-style-type: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.appointments-list li {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 5px 8px !important;
+    border-radius: 3px !important;
+    margin-bottom: 3px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    font-size: 0.8rem !important;
+    color: #fff !important;
+}
+
+.events-list li {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 5px 8px !important;
+    border-radius: 3px !important;
+    margin-bottom: 3px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    font-size: 0.8rem !important;
+    color: #fff !important;
+}
+
+/* Enhanced appointment list item with more details */
+.appointments-list li .appointment-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* Enhanced event list item with more details */
+.events-list li .event-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.appointments-list li .appointment-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.events-list li .event-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.appointments-list li .appointment-meta {
+    font-size: 0.75rem;
+    color: var(--light-blue);
+    margin-top: 2px;
+}
+
+.events-list li .event-meta {
+    font-size: 0.75rem;
+    color: var(--light-blue);
+    margin-top: 2px;
+}
+
+.appointment-location {
+    display: inline-block;
+    margin-left: 5px;
+    color: var(--seafoam);
+}
+
+.event-location {
+    display: inline-block;
+    margin-left: 5px;
+    color: var(--seafoam);
+}
+
+/* Messaggio "nessun appuntamento" */
+.appointments-list li[style*="color:#ccc"] {
+    color: rgba(255, 255, 255, 0.5) !important;
+    background: transparent !important;
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+/* Messaggio "nessun evento" */
+.events-list li[style*="color:#ccc"] {
+    color: rgba(255, 255, 255, 0.5) !important;
+    background: transparent !important;
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+/* Migliora la visualizzazione del datepicker */
+.datepicker {
+    width: 100% !important;
+    font-size: 0.85rem !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    color: #fff !important;
+}
+
+.datepicker .datepicker-view {
+    background: transparent;
+    padding: 0;
+    width: 100%;
+}
+
+.datepicker .datepicker-grid {
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 1px !important;
+    width: 100% !important;
+}
+
+.datepicker .datepicker-cell {
+    color: #fff;
+    border-radius: 4px;
+    transition: background 0.15s;
+    width: calc((100% / 7) - 2px) !important;
+    height: 28px !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    line-height: 28px !important;
+    text-align: center;
+    padding: 0 !important;
+    margin: 1px !important;
+    font-size: 0.8rem !important;
+}
+
+.datepicker .datepicker-cell.day-of-week {
+    color: var(--seafoam);
+    font-weight: bold;
+    font-size: 0.75rem !important;
+    height: 20px !important;
+    line-height: 20px !important;
+}
+
+.datepicker .datepicker-cell:not(.disabled):hover {
+    background: var(--medium-blue);
+}
+
+.datepicker .datepicker-cell.selected {
+    background: var(--coral);
+    color: white;
+    font-weight: bold;
+}
+
+.datepicker .datepicker-cell.today {
+    border: 1px solid var(--seafoam);
+    background: rgba(126, 235, 232, 0.1);
+}
+
+.datepicker .datepicker-header {
+    color: white;
+    padding: 0 0 5px 0;
+    margin-bottom: 5px;
+}
+
+.datepicker .datepicker-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background: transparent;
+}
+
+.datepicker .datepicker-controls .button {
+    color: white;
+    border: none;
+    background: transparent;
+    padding: 2px 5px;
+    font-size: 0.9rem;
+}
+
+.datepicker .datepicker-controls .button:hover {
+    color: var(--light-blue);
+}
+
+/* Ridimensiona il container degli appuntamenti */
+.appointments-list-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 5px;
+    max-height: 200px !important; /* Increased from 150px */
+    overflow-y: auto;
+}
+
+/* Ridimensiona il container degli eventi */
+.events-list-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 5px;
+    max-height: 200px !important;
+    overflow-y: auto;
+}
+
+.appointments-title {
+    color: var(--light-blue);
+    font-weight: 600;
+    font-size: 0.9rem !important; /* Slightly larger font */
+    margin-bottom: 8px !important;
+    padding-left: 2px;
+}
+
+.events-title {
+    color: var(--light-blue);
+    font-weight: 600;
+    font-size: 0.9rem !important; /* Slightly larger font */
+    margin-bottom: 8px !important;
+    padding-left: 2px;
+}
+
+.appointments-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.events-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.appointments-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-radius: 3px;
+    margin-bottom: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
+    color: #fff;
+}
+
+.events-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-radius: 3px;
+    margin-bottom: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
+    color: #fff;
+}
+
+.appointment-time {
+    color: var(--seafoam);
+    font-weight: 600;
+    margin-right: 5px;
+}
+
+.delete-appointment-btn {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.7rem;
+}
+
+.delete-appointment-btn:hover {
+    color: var(--coral);
+}
+
+/* Miglioramento visibilità pulsante aggiungi appuntamento */
+#add-appointment-btn {
+    background-color: var(--coral) !important; /* Colore più visibile */
+    color: white !important;
+    width: auto !important; /* Larghezza automatica per contenere il testo */
+    height: 28px !important;
+    border-radius: 14px !important; /* Bordo arrotondato */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.85rem !important;
+    padding: 0 10px !important; /* Padding orizzontale per il testo */
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important; /* Ombra per far risaltare */
+    border: 1px solid rgba(255, 255, 255, 0.3) !important; /* Bordo sottile */
+}
+
+#add-appointment-btn i {
+    margin-right: 5px !important; /* Spazio tra icona e testo */
+}
+
+#add-appointment-btn:hover {
+    background-color: var(--light-blue) !important;
+    color: var(--deep-blue) !important;
+    transform: translateY(-1px) !important; /* Leggero effetto di sollevamento */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important; /* Ombra più pronunciata all'hover */
+}
+
+/* Miglioramento visibilità pulsante aggiungi evento */
+#add-event-btn {
+    background-color: var(--coral) !important; /* Colore più visibile */
+    color: white !important;
+    width: auto !important; /* Larghezza automatica per contenere il testo */
+    height: 28px !important;
+    border-radius: 14px !important; /* Bordo arrotondato */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.85rem !important;
+    padding: 0 10px !important; /* Padding orizzontale per il testo */
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important; /* Ombra per far risaltare */
+    border: 1px solid rgba(255, 255, 255, 0.3) !important; /* Bordo sottile */
+}
+
+#add-event-btn i {
+    margin-right: 5px !important; /* Spazio tra icona e testo */
+}
+
+#add-event-btn:hover {
+    background-color: var(--light-blue) !important;
+    color: var(--deep-blue) !important;
+    transform: translateY(-1px) !important; /* Leggero effetto di sollevamento */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important; /* Ombra più pronunciata all'hover */
+}
+
+/* Migliora il layout dell'header del calendario */
+.calendar-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 8px !important;
+    padding: 0 2px !important; /* Padding ridotto per dare più spazio */
+}
+
+.calendar-header h4 {
+    color: var(--light-blue) !important;
+    font-size: 1rem !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+}
+
+/* Responsive: assicurati che il calendario sia compatto su schermi piccoli */
+@media (max-width: 768px) {
+    .sidebar-calendar {
+        padding: 8px 5px;
+    }
+    
+    .datepicker .datepicker-cell {
+        height: 24px !important;
+        line-height: 24px !important;
+    }
+}
+
+/* Hide Clear button in datepicker */
+.datepicker .datepicker-clear-btn,
+.datepicker button[data-clear],
+.datepicker [data-action="clear"],
+.datepicker .clear-button,
+.datepicker .datepicker-footer button:not(.today-button):not(.confirm-button) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Hide footer if it only contains the clear button */
+.datepicker .datepicker-footer:has(.datepicker-clear-btn:only-child),
+.datepicker .datepicker-footer:has(button[data-clear]:only-child),
+.datepicker .datepicker-footer:empty {
+    display: none !important;
+}
+
+/* Appointment modal enhancements */
+#appointment-modal .modal-content {
+    max-width: 400px;
+}
+
+#appointment-modal .form-group {
+    margin-bottom: 15px;
+}
+
+#appointment-modal input[type="datetime-local"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+    color: var(--deep-blue);
+    background-color: white;
+}
+
+#appointment-modal input[type="datetime-local"]:focus {
+    border-color: var(--medium-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 119, 182, 0.2);
+}
+
+#appointment-modal select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+    color: var(--deep-blue);
+    background-color: white;
+    cursor: pointer;
+}
+
+#appointment-modal select:focus {
+    border-color: var(--medium-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 119, 182, 0.2);
+}
+
+/* Event modal specific styles - fixed to ensure proper interaction */
+#event-modal .modal-content {
+    max-width: 400px;
+    position: relative; /* Ensure proper stacking context */
+    z-index: 1002; /* Higher than other elements */
+}
+
+#event-modal .form-group {
+    margin-bottom: 15px;
+    position: relative; /* Create stacking context for children */
+}
+
+#event-modal input[type="text"],
+#event-modal input[type="datetime-local"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+    color: var(--deep-blue);
+    background-color: white;
+    position: relative; /* Ensure proper interaction */
+    z-index: 1; /* Make sure inputs are at the top of their container */
+    cursor: text; /* Explicit cursor for text input */
+}
+
+#event-modal input:focus {
+    border-color: var(--medium-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 119, 182, 0.2);
 }
 
 /* Main Chat Container */
@@ -370,6 +1144,7 @@ button:disabled {
 .modal.active {
     opacity: 1;
     visibility: visible;
+    display: flex !important; /* Force display when active */
 }
 
 .modal-content {
@@ -442,26 +1217,260 @@ button:disabled {
     background-color: var(--deep-blue);
 }
 
+/* Appointment modal specific styles */
+#appointment-modal .modal-content {
+    max-width: 350px;
+}
+
+#appointment-modal .form-group {
+    margin-bottom: 15px;
+}
+
+#appointment-modal input[type="time"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+    color: var(--deep-blue);
+    background-color: white;
+}
+
+#appointment-modal input[type="time"]:focus {
+    border-color: var(--medium-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 119, 182, 0.2);
+}
+
+#appointment-modal .primary-btn {
+    background-color: var(--medium-blue);
+    color: white;
+}
+
+#appointment-modal .primary-btn:hover {
+    background-color: var(--deep-blue);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .sidebar {
-        position: absolute;
-        left: -100%;
-        transition: left 0.3s ease;
-        z-index: 100;
-        height: 100%;
+        position: fixed !important;
+        left: -280px !important; /* Assicuriamoci che sia nascosta inizialmente */
+        top: 0;
+        height: 100vh;
+        z-index: 1000;
+        width: 280px;
+        transition: left 0.3s ease-in-out !important;
+        overflow-y: auto;
     }
     
+    /* Override per assicurarci che quando è attiva, la sidebar appaia */
     .sidebar.active {
-        left: 0;
+        left: 0 !important;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        display: block !important;
     }
     
     .chat-container {
         width: 100%;
+        margin-left: 0 !important;
+    }
+    
+    /* Toggle button container - make sure it's always visible */
+    .mobile-menu-toggle {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1001;
+        background-color: var(--medium-blue);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .mobile-menu-toggle:hover {
+        background-color: var(--deep-blue);
+    }
+    
+    /* Sidebar overlay for mobile */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
     }
     
     .message {
         max-width: 90%;
+    }
+    
+    .chat-header {
+        padding: 0 10px;
+    }
+    
+    .current-chat-title {
+        font-size: 1rem;
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .header-actions {
+        gap: 5px;
+    }
+    
+    .action-btn, #send-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .welcome-content {
+        padding: 20px;
+        margin: 0 10px;
+    }
+    
+    .messages-container {
+        padding: 15px 10px;
+    }
+    
+    .message-input-container {
+        padding: 10px;
+    }
+    
+    #message-form {
+        gap: 5px;
+    }
+    
+    .modal-content {
+        width: 90%;
+        padding: 15px;
+    }
+}
+
+/* Desktop specific styles - apply only when NOT in mobile breakpoint */
+@media (min-width: 769px) {
+    .sidebar {
+        position: relative !important; /* Reset fixed position for desktop */
+        left: 0 !important; /* Always visible on desktop */
+        width: var(--sidebar-width);
+        transition: width 0.3s ease;
+    }
+    
+    /* Collapsed state for desktop sidebar */
+    .sidebar.sidebar-collapsed {
+        width: 60px;
+    }
+    
+    .sidebar-collapsed .logo-text,
+    .sidebar-collapsed .chat-list span,
+    .sidebar-collapsed .user-info span {
+        display: none;
+    }
+    
+    /* Adjusting content area when sidebar is collapsed on desktop */
+    .sidebar-collapsed + .chat-container {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+    
+    /* Hide mobile elements on desktop */
+    .mobile-menu-toggle, .sidebar-overlay {
+        display: none !important;
+    }
+}
+
+/* Aggiungiamo una regola globale per assicurarci che il body non nasconda la sidebar */
+body.sidebar-open {
+    overflow: hidden;
+}
+
+/* Aggiungiamo un debug visibile per gli stili della sidebar */
+.sidebar-debug-info {
+    position: fixed;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(255, 0, 0, 0.7);
+    color: white;
+    padding: 5px;
+    font-size: 10px;
+    z-index: 2000;
+    pointer-events: none; /* Non interferisce con i click */
+}
+
+/* Additional styles for very small screens */
+@media (max-width: 480px) {
+    .language-selector select {
+        max-width: 80px;
+        font-size: 0.8rem;
+        padding: 4px 6px;
+    }
+    
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    
+    .message-content {
+        padding: 10px 12px;
+        font-size: 0.95rem;
+    }
+    
+    .welcome-content h2 {
+        font-size: 1.4rem;
+    }
+    
+    .welcome-content p {
+        font-size: 0.9rem;
+    }
+    
+    .welcome-icon {
+        font-size: 3rem;
+    }
+    
+    #message-input {
+        padding: 10px 15px;
+        font-size: 0.95rem;
+    }
+    
+    /* Better touch targets for mobile */
+    .chat-item {
+        padding: 12px 15px;
+        margin-bottom: 8px;
+    }
+    
+    /* Fix mobile keyboard issues */
+    .message-input-container {
+        position: sticky;
+        bottom: 0;
+        background-color: white;
+        z-index: 10;
     }
 }
 
@@ -563,7 +1572,6 @@ button:disabled {
     100% { opacity: 0.4; transform: scale(1); }
 }
 
-
 /* Enhanced markdown styling */
 .message-content pre {
     background-color: #f6f8fa;
@@ -640,7 +1648,6 @@ button:disabled {
     margin-bottom: 16px;
     line-height: 1.6;
 }
-
 
 /* Authentication Styles */
 .auth-container {
@@ -843,7 +1850,6 @@ button:disabled {
     color: white;
 }
 
-
 .auth-logo {
     text-align: center;
 }
@@ -853,7 +1859,6 @@ button:disabled {
     height: auto; /* Maintain aspect ratio */
     margin: 0 auto;
 }
-
 
 .sidebar-logo {
     display: flex;
@@ -865,12 +1870,6 @@ button:disabled {
     width: 40px;
     height: auto;
     margin-right: 10px;
-}
-
-
-.app-container {
-    position: relative;
-    transition: all 0.3s ease;
 }
 
 .sidebar {
@@ -997,4 +1996,64 @@ input[type="date"]:focus {
     outline: none;
     border-color: var(--medium-blue);
     box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.2);
+}
+
+/* Flatpickr styling to match our app */
+.flatpickr-calendar {
+    background-color: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.flatpickr-month {
+    background-color: var(--medium-blue) !important;
+    color: white !important;
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+}
+
+.flatpickr-weekday {
+    background-color: white !important;
+    color: var(--deep-blue) !important;
+    font-weight: 600 !important;
+}
+
+.flatpickr-day.selected, 
+.flatpickr-day.startRange, 
+.flatpickr-day.endRange {
+    background: var(--coral) !important;
+    border-color: var(--coral) !important;
+}
+
+.flatpickr-day.today {
+    border-color: var(--medium-blue) !important;
+}
+
+.flatpickr-day:hover {
+    background: var(--pale-blue) !important;
+}
+
+.flatpickr-input {
+    padding: 10px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    font-size: 1rem !important;
+    width: 100% !important;
+    color: var(--deep-blue) !important;
+    background-color: white !important;
+}
+
+.flatpickr-time input,
+.flatpickr-time .flatpickr-time-separator,
+.flatpickr-time .flatpickr-am-pm {
+    color: var(--deep-blue) !important;
+}
+
+.numInputWrapper:hover {
+    background: var(--pale-blue) !important;
+}
+
+.flatpickr-current-month .numInputWrapper span.arrowUp:after,
+.flatpickr-current-month .numInputWrapper span.arrowDown:after {
+    border-color: white transparent !important;
 }
