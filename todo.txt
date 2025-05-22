@@ -4,4 +4,5 @@
 4) ✓ Mettere un pulsante stop di lettura del modello
 5) Rimuovere la lettura del markdown di kokoro
 6) ✓ Implementare il calendario nella sidebar laterale
+7) ✓ Salvataggio eventi calendario nel database e condivisione tra utenti
 

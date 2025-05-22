@@ -187,6 +187,12 @@
 <!-- Add Flatpickr for better date picker control -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- Add current user ID for JavaScript - ensure it's always set -->
+<script>
+    // Set current user ID for event management
+    const currentUserId = {{ current_user.id|default('null') }};
+    console.log('Current user ID from template:', currentUserId);
+</script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
     // Force English locale for the entire document and all inputs

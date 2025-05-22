@@ -111,6 +111,19 @@ class Message(db.Model):
     chat_id = db.Column(db.String(36), db.ForeignKey('chat.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+# Add new Event model for shared calendar
+class Event(db.Model):
+    id = db.Column(db.String(36), primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    start = db.Column(db.DateTime, nullable=False)
+    end = db.Column(db.DateTime, nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Add relationship to User model
+    user = db.relationship('User', backref=db.backref('events', lazy=True))
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -516,6 +529,200 @@ def set_chat_language(chat_id):
         'success': True,
         'language': language,
         'chat_id': chat_id
+    })
+
+@app.route('/api/events', methods=['GET'])
+@login_required
+def get_events():
+    """Get all events for the shared calendar"""
+    # Convert date parameter to datetime if provided
+    date_str = request.args.get('date')
+    
+    if date_str:
+        try:
+            # Parse date string to date object with more flexible handling
+            # Strip any timezone info or extra characters that might cause issues
+            date_str = date_str.strip()
+            
+            # Log the received date string for debugging
+            app.logger.debug(f"Received date parameter: {date_str}")
+            
+            # Parse date string to date object
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            
+            # Create datetime objects for start and end of day
+            start_of_day = datetime.combine(date_obj, datetime.min.time())
+            end_of_day = datetime.combine(date_obj, datetime.max.time())
+            
+            app.logger.debug(f"Querying events between {start_of_day} and {end_of_day}")
+            
+            # Query events that overlap with this day
+            events = Event.query.filter(
+                Event.start <= end_of_day,
+                Event.end >= start_of_day
+            ).all()
+            
+            app.logger.debug(f"Found {len(events)} events for {date_str}")
+            
+        except ValueError as e:
+            app.logger.error(f"Date parsing error: {str(e)} for input '{date_str}'")
+            return jsonify({'error': f'Invalid date format. Use YYYY-MM-DD. Error: {str(e)}'}), 400
+        except Exception as e:
+            app.logger.error(f"Error retrieving events: {str(e)}")
+            return jsonify({'error': f'Server error: {str(e)}'}), 500
+    else:
+        # If no date provided, return all events
+        try:
+            events = Event.query.all()
+            app.logger.debug(f"Returning all events: {len(events)} found")
+        except Exception as e:
+            app.logger.error(f"Error retrieving all events: {str(e)}")
+            return jsonify({'error': f'Server error: {str(e)}'}), 500
+    
+    try:
+        events_data = [{
+            'id': event.id,
+            'title': event.title,
+            'start': event.start.isoformat(),
+            'end': event.end.isoformat(),
+            'location': event.location,
+            'user_id': event.user_id,
+            'username': User.query.get(event.user_id).username,
+            'created_at': event.created_at.isoformat()
+        } for event in events]
+        
+        return jsonify(events_data)
+    except Exception as e:
+        app.logger.error(f"Error formatting events data: {str(e)}")
+        return jsonify({'error': f'Error formatting event data: {str(e)}'}), 500
+
+@app.route('/api/events', methods=['POST'])
+@login_required
+def create_event():
+    """Create a new event in the shared calendar"""
+    try:
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['title', 'start', 'end', 'location']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Parse datetime strings
+        start_time = datetime.fromisoformat(data['start'].replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(data['end'].replace('Z', '+00:00'))
+        
+        # Create new event
+        new_event = Event(
+            id=str(uuid.uuid4()),
+            title=data['title'],
+            start=start_time,
+            end=end_time,
+            location=data['location'],
+            user_id=current_user.id
+        )
+        
+        db.session.add(new_event)
+        db.session.commit()
+        
+        return jsonify({
+            'id': new_event.id,
+            'title': new_event.title,
+            'start': new_event.start.isoformat(),
+            'end': new_event.end.isoformat(),
+            'location': new_event.location,
+            'user_id': new_event.user_id,
+            'username': current_user.username,
+            'created_at': new_event.created_at.isoformat()
+        })
+    
+    except ValueError as e:
+        return jsonify({'error': f'Invalid datetime format: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error creating event: {str(e)}'}), 500
+
+@app.route('/api/events/<event_id>', methods=['DELETE'])
+@login_required
+def delete_event(event_id):
+    """Delete an event from the shared calendar"""
+    event = Event.query.get(event_id)
+    
+    if not event:
+        return jsonify({'error': 'Event not found'}), 404
+    
+    # Only allow the event creator or admin to delete
+    if event.user_id != current_user.id:
+        return jsonify({'error': 'Permission denied - You can only delete your own events'}), 403
+    
+    try:
+        db.session.delete(event)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Event deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error deleting event: {str(e)}'}), 500
+
+@app.route('/api/events/<event_id>', methods=['PUT'])
+@login_required
+def update_event(event_id):
+    """Update an existing event in the shared calendar"""
+    event = Event.query.get(event_id)
+    
+    if not event:
+        return jsonify({'error': 'Event not found'}), 404
+    
+    # Only allow the event creator to update
+    if event.user_id != current_user.id:
+        return jsonify({'error': 'Permission denied - You can only update your own events'}), 403
+    
+    try:
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['title', 'start', 'end', 'location']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Parse datetime strings
+        start_time = datetime.fromisoformat(data['start'].replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(data['end'].replace('Z', '+00:00'))
+        
+        # Update event fields
+        event.title = data['title']
+        event.start = start_time
+        event.end = end_time
+        event.location = data['location']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'id': event.id,
+            'title': event.title,
+            'start': event.start.isoformat(),
+            'end': event.end.isoformat(),
+            'location': event.location,
+            'user_id': event.user_id,
+            'username': current_user.username,
+            'created_at': event.created_at.isoformat()
+        })
+    
+    except ValueError as e:
+        return jsonify({'error': f'Invalid datetime format: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error updating event: {str(e)}'}), 500
+
+# Add new API endpoint to get current user info
+@app.route('/api/user/current', methods=['GET'])
+@login_required
+def get_current_user():
+    """Get current user information for client-side use"""
+    return jsonify({
+        'id': current_user.id,
+        'username': current_user.username
     })
 
 @socketio.on('connect')

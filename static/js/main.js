@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let socket = null; // WebSocket connection
     let speechRecognition = null; // For speech recognition
     let currentLanguage = 'en'; // Default language is English
+    let current_user = { id: null }; // Add proper initialization for current_user
 
     // Calendario mensile nella sidebar
     const calendarMonthDiv = document.getElementById('calendar-month');
@@ -252,21 +253,65 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadEventsForDate(dateStr) {
         if (!eventsList) return;
         
-        const events = getEventsForDate(dateStr);
-        renderEventsList(events);
-    }
-
-    // Ottieni eventi dal localStorage per una data
-    function getEventsForDate(dateStr) {
-        const all = JSON.parse(localStorage.getItem('events') || '{}');
-        return all[dateStr] || [];
-    }
-
-    // Salva eventi per una data
-    function saveEventsForDate(dateStr, events) {
-        const all = JSON.parse(localStorage.getItem('events') || '{}');
-        all[dateStr] = events;
-        localStorage.setItem('events', JSON.stringify(all));
+        // Show loading indicator
+        eventsList.innerHTML = '<li style="color:#ccc;font-size:0.9em;text-align:center;">Loading events...</li>';
+        
+        console.log(`Loading events for date: ${dateStr}`);
+        
+        // Ensure the date is in YYYY-MM-DD format
+        let formattedDate = dateStr;
+        if (dateStr && typeof dateStr === 'string') {
+            // Normalize the date format if needed
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                // Ensure leading zeros in month and day
+                const year = parts[0];
+                const month = parts[1].padStart(2, '0');
+                const day = parts[2].padStart(2, '0');
+                formattedDate = `${year}-${month}-${day}`;
+            }
+        }
+        
+        console.log(`Formatted date for API call: ${formattedDate}`);
+        
+        // Fetch events from API instead of localStorage
+        fetch(`/api/events?date=${formattedDate}`)
+            .then(response => {
+                console.log(`API response status: ${response.status}`);
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(`Server error: ${errData.error || response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(events => {
+                console.log(`Received ${events.length} events from server`);
+                // Sort events by start time
+                events.sort((a, b) => new Date(a.start) - new Date(b.start));
+                renderEventsList(events);
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                eventsList.innerHTML = `<li style="color:#ccc;font-size:0.9em;text-align:center;">Error loading events: ${error.message}</li>`;
+                
+                // Auto-retry after a short delay (only once)
+                setTimeout(() => {
+                    console.log('Retrying event fetch...');
+                    fetch(`/api/events?date=${formattedDate}`)
+                        .then(response => response.ok ? response.json() : [])
+                        .then(events => {
+                            if (events && events.length >= 0) {
+                                console.log(`Retry succeeded, received ${events.length} events`);
+                                events.sort((a, b) => new Date(a.start) - new Date(b.start));
+                                renderEventsList(events);
+                            }
+                        })
+                        .catch(retryError => {
+                            console.error('Retry also failed:', retryError);
+                        });
+                }, 1000);
+            });
     }
 
     // Renderizza la lista eventi with enhanced display
@@ -280,12 +325,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        events.forEach((evt, idx) => {
+        // Get current user ID safely
+        const currentUserId = current_user && current_user.id ? current_user.id : null;
+        console.log('Current user ID when rendering events:', currentUserId);
+        
+        events.forEach((evt) => {
             const li = document.createElement('li');
             
-            // Format the time display
-            const timeDisplay = evt.time || evt.start?.split('T')[1].substring(0, 5) || '';
-            const locationDisplay = evt.location ? `<span class="event-location"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(evt.location)}</span>` : '';
+            // Format the time display - parse ISO string to get time
+            const startDate = new Date(evt.start);
+            const endDate = new Date(evt.end);
+            const timeDisplay = `${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}-${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            
+            const locationDisplay = evt.location ? 
+                `<span class="event-location"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(evt.location)}</span>` : '';
+            
+            // Include username to show who created the event
+            const usernameDisplay = `<span class="event-creator"><i class="fas fa-user"></i> ${escapeHtml(evt.username)}</span>`;
+            
+            // Only show action buttons if we know the current user and they own the event
+            const showButtons = currentUserId && evt.user_id === currentUserId;
             
             li.innerHTML = `
                 <div class="event-details">
@@ -293,24 +352,285 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="event-meta">
                         <span class="event-time">${timeDisplay}</span>
                         ${locationDisplay}
+                        ${usernameDisplay}
                     </div>
                 </div>
-                <button class="delete-event-btn" title="Delete" data-idx="${idx}">
-                    <i class="fas fa-trash-alt"></i>
-                </button>`;
+                ${showButtons ? 
+                `<div class="event-actions">
+                    <button class="edit-event-btn themed-edit-btn" title="Edit event" data-id="${evt.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="delete-event-btn themed-delete-btn" title="Delete event" data-id="${evt.id}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>` : ''}`;
+                
             eventsList.appendChild(li);
         });
         
-        // Delete event handlers
-        eventsList.querySelectorAll('.delete-event-btn').forEach(btn => {
+        // Add edit button handlers
+        eventsList.querySelectorAll('.edit-event-btn').forEach(btn => {
+            // Apply theme-consistent styling to edit buttons
+            btn.addEventListener('mouseenter', function() {
+                this.classList.add('edit-hover');
+            });
+            
+            btn.addEventListener('mouseleave', function() {
+                this.classList.remove('edit-hover');
+            });
+            
+            // Edit event handler
             btn.addEventListener('click', function(e) {
-                const idx = parseInt(btn.getAttribute('data-idx'));
-                let events = getEventsForDate(selectedDate);
-                events.splice(idx, 1);
-                saveEventsForDate(selectedDate, events);
-                renderEventsList(events);
+                const eventId = btn.getAttribute('data-id');
+                // Find the event in the current list
+                const event = events.find(evt => evt.id === eventId);
+                if (event) {
+                    openEventModalForEdit(event);
+                }
             });
         });
+        
+        // Add enhanced styling and effects to delete buttons
+        eventsList.querySelectorAll('.delete-event-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.classList.add('delete-hover');
+            });
+            
+            btn.addEventListener('mouseleave', function() {
+                this.classList.remove('delete-hover');
+            });
+            
+            // Delete event handlers with improved feedback
+            btn.addEventListener('click', function(e) {
+                const eventId = btn.getAttribute('data-id');
+                
+                if (confirm('Are you sure you want to delete this event?')) {
+                    // Show loading state
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    btn.disabled = true;
+                    
+                    fetch(`/api/events/${eventId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Visual feedback before reload
+                            const listItem = btn.closest('li');
+                            listItem.style.opacity = '0.5';
+                            listItem.style.height = listItem.offsetHeight + 'px';
+                            
+                            // Animate removal
+                            setTimeout(() => {
+                                listItem.style.height = '0';
+                                listItem.style.margin = '0';
+                                listItem.style.padding = '0';
+                                listItem.style.overflow = 'hidden';
+                                
+                                // Reload events after animation
+                                setTimeout(() => loadEventsForDate(selectedDate), 300);
+                            }, 200);
+                        } else {
+                            alert('Error deleting event: ' + data.error);
+                            btn.innerHTML = originalHTML;
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting event:', error);
+                        alert('Error deleting event. Please try again.');
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                    });
+                }
+            });
+        });
+    }
+
+    // New function to open event modal for editing
+    function openEventModalForEdit(event) {
+        if (!eventModal || !eventForm) return;
+        
+        console.log('Opening event modal for editing:', event);
+        
+        // Store the event ID in the form for update handling
+        eventForm.setAttribute('data-event-id', event.id);
+        
+        // Set form values from event data
+        if (eventTitle) {
+            eventTitle.value = event.title;
+        }
+        
+        // Parse the dates
+        const startDate = new Date(event.start);
+        const endDate = new Date(event.end);
+        
+        // Format for flatpickr or regular input
+        const startFormatted = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')} ${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+        const endFormatted = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')} ${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+        
+        // For Flatpickr inputs
+        if (eventStart && eventStart._flatpickr) {
+            eventStart._flatpickr.setDate(startFormatted);
+        } else if (eventStart) {
+            eventStart.value = startFormatted;
+        }
+        
+        if (eventEnd && eventEnd._flatpickr) {
+            eventEnd._flatpickr.setDate(endFormatted);
+        } else if (eventEnd) {
+            eventEnd.value = endFormatted;
+        }
+        
+        // Set location if applicable
+        if (eventLocation) {
+            // Try to find the matching option
+            const options = eventLocation.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === event.location) {
+                    eventLocation.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        // Update the submit button to show "Update"
+        const submitBtn = eventForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = 'Update Event';
+            submitBtn.classList.add('update-mode');
+        }
+        
+        // Show the modal
+        eventModal.classList.add('active');
+        
+        // Focus on the title field
+        setTimeout(() => {
+            if (eventTitle) {
+                eventTitle.focus();
+            }
+        }, 200);
+    }
+
+    // Close event modal - updated to reset form state
+    function closeEventModal() {
+        if (eventModal) {
+            eventModal.classList.remove('active');
+            
+            // Reset form state
+            if (eventForm) {
+                eventForm.removeAttribute('data-event-id');
+                
+                // Reset submit button
+                const submitBtn = eventForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = 'Add Event';
+                    submitBtn.classList.remove('update-mode');
+                }
+            }
+        }
+    }
+
+    // Handle event form submission - modified to handle both create and update
+    function handleEventSubmit(e) {
+        e.preventDefault();
+        
+        if (!eventTitle || !eventStart || !eventEnd || !eventLocation) return;
+        
+        const title = eventTitle.value.trim();
+        let start, end;
+        
+        // Get date values from flatpickr if available
+        if (eventStart._flatpickr) {
+            const startDate = eventStart._flatpickr.selectedDates[0];
+            start = startDate.toISOString();
+        } else {
+            start = new Date(eventStart.value).toISOString();
+        }
+        
+        if (eventEnd._flatpickr) {
+            const endDate = eventEnd._flatpickr.selectedDates[0];
+            end = endDate.toISOString();
+        } else {
+            end = new Date(eventEnd.value).toISOString();
+        }
+        
+        const location = eventLocation.value;
+        
+        // Check if we're updating an existing event or creating a new one
+        const eventId = eventForm.getAttribute('data-event-id');
+        const isUpdate = !!eventId;
+        
+        console.log(`${isUpdate ? 'Updating' : 'Creating'} event: ${title} from ${start} to ${end} at ${location}`);
+        
+        if (title && start && end && location) {
+            // Show loading state
+            const submitBtn = eventForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = isUpdate ? 'Updating...' : 'Saving...';
+            
+            // Prepare the event data
+            const eventData = {
+                title,
+                start,
+                end,
+                location
+            };
+            
+            // Determine API endpoint and method based on whether we're updating or creating
+            const url = isUpdate ? `/api/events/${eventId}` : '/api/events';
+            const method = isUpdate ? 'PUT' : 'POST';
+            
+            // Send to API
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(eventData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(`Server error: ${errData.error || response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(`Event ${isUpdate ? 'updated' : 'created'} successfully:`, data);
+                // Reset form and close modal
+                closeEventModal();
+                
+                // Extract date for display update
+                const eventDate = new Date(data.start).toISOString().split('T')[0];
+                console.log(`Event date for refresh: ${eventDate}, current selected date: ${selectedDate}`);
+                
+                // If we're viewing the date where the event was added/updated, update the list
+                if (selectedDate === eventDate) {
+                    loadEventsForDate(selectedDate);
+                }
+            })
+            .catch(error => {
+                console.error(`Error ${isUpdate ? 'updating' : 'creating'} event:`, error);
+                alert(`Error ${isUpdate ? 'updating' : 'creating'} event: ${error.message}. Please try again.`);
+            })
+            .finally(() => {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        }
     }
 
     // Aggiungi appuntamento - Updated to use modal
@@ -490,13 +810,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Close event modal
-    function closeEventModal() {
-        if (eventModal) {
-            eventModal.classList.remove('active');
-        }
-    }
-
     // Handle appointment form submission
     function handleAppointmentSubmit(e) {
         e.preventDefault();
@@ -542,67 +855,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Handle event form submission
-    function handleEventSubmit(e) {
-        e.preventDefault();
-        
-        if (!eventTitle || !eventStart || !eventEnd || !eventLocation) return;
-        
-        const title = eventTitle.value.trim();
-        let start, end;
-        
-        // Get date values from flatpickr if available
-        if (eventStart._flatpickr) {
-            const startDate = eventStart._flatpickr.selectedDates[0];
-            start = startDate.toISOString().slice(0, 16).replace('T', ' ');
-        } else {
-            start = eventStart.value;
-        }
-        
-        if (eventEnd._flatpickr) {
-            const endDate = eventEnd._flatpickr.selectedDates[0];
-            end = endDate.toISOString().slice(0, 16).replace('T', ' ');
-        } else {
-            end = eventEnd.value;
-        }
-        
-        const location = eventLocation.value;
-        
-        if (title && start && end && location) {
-            // Format for storage
-            const formattedStart = start.replace(' ', 'T');
-            const formattedEnd = end.replace(' ', 'T');
-            
-            // Extract date for storage key (YYYY-MM-DD)
-            const startDate = formattedStart.split('T')[0];
-            
-            // Format time for display (HH:MM)
-            const startTime = formattedStart.split('T')[1].substring(0, 5);
-            const endTime = formattedEnd.split('T')[1].substring(0, 5);
-            
-            // Create event object
-            const event = {
-                title,
-                start: formattedStart,
-                end: formattedEnd,
-                location,
-                time: `${startTime}-${endTime}`
-            };
-            
-            // Save and update UI
-            let events = getEventsForDate(startDate);
-            events.push(event);
-            events.sort((a, b) => a.start.localeCompare(b.start));
-            saveEventsForDate(startDate, events);
-            
-            if (selectedDate === startDate) {
-                renderEventsList(events);
-            }
-            
-            closeEventModal();
-        }
-    }
-
     // Initialize app
     function init() {
         // Set the language selector to the default value or saved preference
@@ -612,6 +864,52 @@ document.addEventListener('DOMContentLoaded', function() {
             languageSelector.value = savedLanguage;
         }
         
+        // Improve the "Add event" button appearance
+        if (addEventBtn) {
+            // Change text to "Add event"
+            addEventBtn.innerHTML = '<i class="fas fa-plus"></i> Add event';
+            // Apply theme-appropriate styling
+            addEventBtn.classList.add('themed-button');
+            // Use primary theme color
+            addEventBtn.style.backgroundColor = 'var(--primary-color, #1E88E5)';
+            addEventBtn.style.color = 'white';
+            addEventBtn.style.border = 'none';
+            addEventBtn.style.padding = '8px 12px';
+            addEventBtn.style.borderRadius = '4px';
+            addEventBtn.style.cursor = 'pointer';
+            addEventBtn.style.fontWeight = '500';
+            addEventBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            
+            // Add hover effect
+            addEventBtn.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--primary-dark, #1565C0)';
+                this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+            });
+            
+            addEventBtn.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'var(--primary-color, #1E88E5)';
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            });
+            
+            console.log('Event button styled and renamed to "Add event"');
+        }
+        
+        // Set the current user ID from a global variable
+        try {
+            // Try to get from the global variable that should be set in the HTML template
+            if (typeof currentUserId !== 'undefined' && currentUserId) {
+                current_user.id = currentUserId;
+                console.log('Current user ID initialized from template:', current_user.id);
+            } else {
+                // If not available in the template, try to fetch it from the server
+                fetchCurrentUser();
+            }
+        } catch (e) {
+            console.error('Error initializing current user:', e);
+            // Try to fetch from server as a fallback
+            fetchCurrentUser();
+        }
+
         fetchChats();
         setupEventListeners();
         adjustTextareaHeight();
@@ -680,6 +978,29 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.warn('Could not override navigator language:', e);
         }
+    }
+
+    // Function to fetch current user info if not provided in the template
+    function fetchCurrentUser() {
+        console.log('Fetching current user info from server...');
+        fetch('/api/user/current')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch current user');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.id) {
+                    current_user.id = data.id;
+                    console.log('Current user ID fetched from server:', current_user.id);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching current user:', error);
+                // Use a fallback ID that won't match any events
+                current_user.id = -1;
+            });
     }
 
     function initAudioContext() {
@@ -1033,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!speechRecognition) {
                 initSpeechRecognition();
                 if (!speechRecognition) {
-                    alert("Impossibile inizializzare il riconoscimento vocale.");
+                    alert("Impossibile avviare il riconoscimento vocale.");
                     return;
                 }
             }
