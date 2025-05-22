@@ -715,6 +715,94 @@ def update_event(event_id):
         db.session.rollback()
         return jsonify({'error': f'Error updating event: {str(e)}'}), 500
 
+# API endpoint to get events for an entire month
+@app.route('/api/events/month/<int:year>/<string:month>', methods=['GET'])
+@login_required
+def get_events_for_month(year, month):
+    """Get all events for a specific month"""
+    try:
+        # Construct start and end dates for the month
+        start_date = f"{year}-{month}-01"
+        
+        # Determine the last day of the month
+        if month == '12':
+            end_date = f"{year + 1}-01-01"
+        else:
+            next_month = int(month) + 1
+            end_date = f"{year}-{str(next_month).zfill(2)}-01"
+        
+        # Query events within the month
+        events = Event.query.filter(
+            Event.start >= start_date,
+            Event.start < end_date
+        ).all()
+        
+        event_list = []
+        for event in events:
+            event_list.append({
+                'id': event.id,
+                'title': event.title,
+                'start': event.start.isoformat(),
+                'end': event.end.isoformat(),
+                'location': event.location,
+                'user_id': event.user_id,
+                'username': User.query.get(event.user_id).username
+            })
+        
+        return jsonify(event_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/events/month/<string:yearmonth>', methods=['GET'])
+@login_required
+def get_events_by_month_string(yearmonth):
+    """Get all events for a specific month (format: YYYY-MM)"""
+    try:
+        # Parse year and month
+        year, month = yearmonth.split('-')
+        
+        # Construct start and end dates for the month
+        start_date = f"{year}-{month}-01"
+        
+        # Determine the last day of the month
+        if month == '12':
+            end_date = f"{int(year) + 1}-01-01"
+        else:
+            next_month = int(month) + 1
+            end_date = f"{year}-{str(next_month).zfill(2)}-01"
+        
+        # Query events within the month
+        events = Event.query.filter(
+            Event.start >= start_date,
+            Event.start < end_date
+        ).all()
+        
+        event_list = []
+        for event in events:
+            event_list.append({
+                'id': event.id,
+                'title': event.title,
+                'start': event.start.isoformat(),
+                'end': event.end.isoformat(),
+                'location': event.location,
+                'user_id': event.user_id,
+                'username': User.query.get(event.user_id).username
+            })
+        
+        # Log for debugging
+        print(f"API: Found {len(event_list)} events for {yearmonth}")
+        return jsonify(event_list)
+    except Exception as e:
+        print(f"API Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Add alternative endpoint format for compatibility
+@app.route('/api/events/month/<int:year>/<string:month>', methods=['GET'])
+@login_required
+def get_events_by_year_and_month(year, month):
+    """Alternative endpoint for getting events by year and month separately"""
+    return get_events_by_month_string(f"{year}-{month}")
+
 # Add new API endpoint to get current user info
 @app.route('/api/user/current', methods=['GET'])
 @login_required

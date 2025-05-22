@@ -300,6 +300,52 @@ button:disabled {
     font-size: 0.8rem !important;
     border: none !important;
     background: rgba(255, 255, 255, 0.08) !important;
+    position: relative !important;
+}
+
+/* Event indicator dot for calendar days - ENHANCED */
+.datepicker .datepicker-cell.has-events {
+    overflow: visible !important; /* Ensure indicator isn't clipped */
+    border: 2px solid #ff5733 !important; /* Bright orange border */
+}
+
+.datepicker .datepicker-cell.has-events::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 2px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 8px !important; /* Larger size */
+    height: 8px !important;
+    border-radius: 50% !important;
+    background-color: #ff5733 !important; /* Bright orange */
+    display: block !important;
+    box-shadow: 0 0 5px #ff5733 !important; /* Glow effect */
+    z-index: 100 !important; /* Very high z-index */
+}
+
+/* When day is selected and has events */
+.datepicker .datepicker-cell.selected.has-events::after {
+    background-color: white !important;
+    width: 5px;
+    height: 5px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* When today has events */
+.datepicker .datepicker-cell.today.has-events::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 2px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 8px !important; /* Larger */
+    height: 8px !important; /* Larger */
+    border-radius: 50% !important;
+    background-color: #ff5733 !important;
+    display: block !important;
+    box-shadow: 0 0 5px #ff5733 !important; /* Glow effect */
+    z-index: 100 !important; /* Ensure it's on top */
 }
 
 /* Giorni disabilitati (fuori dal mese corrente) */
@@ -803,11 +849,36 @@ button:disabled {
     padding: 0 2px !important; /* Padding ridotto per dare più spazio */
 }
 
+/* Event indicator dot for calendar days */
+.datepicker .datepicker-cell.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--coral);
+    display: block;
+    box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+/* When day is selected and has events */
+.datepicker .datepicker-cell.selected.has-events::after {
+    background-color: white;
+    width: 4px;
+    height: 4px;
+}
+
+/* When today has events */
+.datepicker .datepicker-cell.today.has-events::after {
+    background-color: var(--coral);
+    opacity: 0.9;
+}
+
 .calendar-header h4 {
     color: var(--light-blue) !important;
-    font-size: 1rem !important;
-    margin: 0 !important;
-    font-weight: 600 !important;
 }
 
 /* Responsive: assicurati che il calendario sia compatto su schermi piccoli */

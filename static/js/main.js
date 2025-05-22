@@ -131,6 +131,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Carica eventi per oggi
             loadEventsForDate(selectedDate);
             
+            // Load events for current month to show indicators
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1; // JavaScript months are 0-based
+            fetchEventsForMonth(currentYear, currentMonth);
+            
             // Listener per cambio data
             calendarMonthDiv.addEventListener('changeDate', function(e) {
                 const dateObj = e.detail.date;
@@ -159,10 +164,212 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadEventsForDate(selectedDate);
             });
             
+            // Add listener for month change to update event indicators
+            calendarMonthDiv.addEventListener('changeMonth', function(e) {
+                console.log("Month changed in calendar");
+                const dateObj = e.detail.date;
+                if (!dateObj) return;
+                
+                const year = dateObj.getFullYear();
+                const month = dateObj.getMonth() + 1; // JavaScript months are 0-based
+                
+                // Fetch events for the new month
+                fetchEventsForMonth(year, month);
+            });
+            
             console.log('Calendar initialized successfully');
         } catch (error) {
             console.error('Error initializing calendar:', error);
         }
+    }
+    
+    // Completely rewritten function to fetch and display event indicators
+    function fetchEventsForMonth(year, month) {
+        // Format month with leading zero if needed
+        const formattedMonth = String(month).padStart(2, '0');
+        
+        console.log(`===== FETCHING EVENTS FOR ${year}-${formattedMonth} =====`);
+        
+        // Always clear existing indicators first
+        clearEventIndicators();
+        
+        // Fetch events from server
+        fetch(`/api/events/month/${year}-${formattedMonth}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(events => {
+                if (!Array.isArray(events)) {
+                    console.error('API returned non-array data:', events);
+                    return;
+                }
+                
+                console.log(`Received ${events.length} events for ${year}-${formattedMonth}`);
+                
+                // Process events to extract dates with events
+                const processedDates = processEventDates(events);
+                
+                // Apply indicators to calendar days
+                applyEventIndicators(processedDates);
+                
+                // Set up retry mechanism to handle potential timing issues
+                setTimeout(() => {
+                    const markedDays = document.querySelectorAll('.datepicker-cell.has-events');
+                    if (markedDays.length === 0 && processedDates.size > 0) {
+                        console.log('No indicators were added on first attempt. Retrying...');
+                        applyEventIndicators(processedDates);
+                    }
+                }, 500);
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+            });
+    }
+    
+    // Helper function to extract dates from events
+    function processEventDates(events) {
+        const eventDates = new Set();
+        
+        // Process each event to extract just the date part
+        events.forEach(event => {
+            if (event && event.start) {
+                try {
+                    // Handle different date formats
+                    let dateStr = '';
+                    if (typeof event.start === 'string') {
+                        // Handle ISO format with T separator
+                        if (event.start.includes('T')) {
+                            dateStr = event.start.split('T')[0];
+                        } 
+                        // Handle format with space separator
+                        else if (event.start.includes(' ')) {
+                            dateStr = event.start.split(' ')[0];
+                        }
+                        // Already in YYYY-MM-DD format
+                        else {
+                            dateStr = event.start;
+                        }
+                    }
+                    
+                    if (dateStr) {
+                        eventDates.add(dateStr);
+                        console.log(`Event on ${dateStr}: ${event.title || 'Unnamed event'}`);
+                    }
+                } catch (e) {
+                    console.error('Error processing event date:', e, event);
+                }
+            }
+        });
+        
+        console.log(`Processed ${eventDates.size} unique dates with events:`, Array.from(eventDates));
+        return eventDates;
+    }
+    
+    // Clear all event indicators
+    function clearEventIndicators() {
+        if (!calendarMonthDiv) return;
+        
+        const daysWithIndicators = calendarMonthDiv.querySelectorAll('.has-events');
+        console.log(`Clearing ${daysWithIndicators.length} existing indicators`);
+        
+        daysWithIndicators.forEach(day => {
+            day.classList.remove('has-events');
+        });
+    }
+    
+    // Apply event indicators to calendar cells - improved with multiple approaches
+    function applyEventIndicators(eventDates) {
+        if (!calendarMonthDiv || !eventDates || eventDates.size === 0) {
+            console.log('No dates to mark or calendar not available');
+            return;
+        }
+        
+        console.log('Applying event indicators to calendar...');
+        
+        // Try different selectors to find calendar day cells
+        let dayCells = calendarMonthDiv.querySelectorAll('.datepicker-cell.day');
+        
+        if (dayCells.length === 0) {
+            console.log('No day cells found with primary selector, trying alternatives...');
+            dayCells = calendarMonthDiv.querySelectorAll('.datepicker-cell');
+        }
+        
+        if (dayCells.length === 0) {
+            console.error('Could not find any day cells in the calendar');
+            return;
+        }
+        
+        console.log(`Found ${dayCells.length} total day cells in calendar`);
+        
+        // Debug - show what dates are available in the calendar
+        const availableDates = new Set();
+        dayCells.forEach(cell => {
+            if (cell.dataset.date) {
+                availableDates.add(cell.dataset.date);
+            }
+        });
+        console.log('Available dates in calendar:', Array.from(availableDates));
+        
+        // Mark days that have events
+        let indicatorsAdded = 0;
+        
+        dayCells.forEach(cell => {
+            // Skip days from previous/next months
+            if (cell.classList.contains('prev') || cell.classList.contains('next')) {
+                return;
+            }
+            
+            const cellDate = cell.dataset.date;
+            if (cellDate && eventDates.has(cellDate)) {
+                cell.classList.add('has-events');
+                indicatorsAdded++;
+                console.log(`✓ Added indicator to ${cellDate}`);
+            }
+        });
+        
+        console.log(`Added indicators to ${indicatorsAdded} days out of ${eventDates.size} event dates`);
+        
+        // Force re-render if no indicators were added
+        if (indicatorsAdded === 0 && eventDates.size > 0) {
+            console.warn('Failed to add any indicators despite having events');
+            
+            // Last resort - try marking days by innerText number
+            const eventDaysArray = Array.from(eventDates).map(dateStr => parseInt(dateStr.split('-')[2]));
+            console.log('Attempting to mark days by their number:', eventDaysArray);
+            
+            dayCells.forEach(cell => {
+                if (!cell.classList.contains('prev') && !cell.classList.contains('next')) {
+                    const dayNum = parseInt(cell.innerText.trim());
+                    if (!isNaN(dayNum) && eventDaysArray.includes(dayNum)) {
+                        cell.classList.add('has-events');
+                        console.log(`Added indicator to day ${dayNum} by number`);
+                    }
+                }
+            });
+        }
+    }
+
+    // Helper function to get days with appointments in a month from localStorage
+    function getDaysWithAppointmentsInMonth(year, month) {
+        const all = JSON.parse(localStorage.getItem('appointments') || '{}');
+        const daysWithAppointments = [];
+        
+        // Format month with leading zero
+        const formattedMonth = String(month).padStart(2, '0');
+        const monthPrefix = `${year}-${formattedMonth}-`;
+        
+        // Check each day in localStorage
+        for (const dateStr in all) {
+            if (dateStr.startsWith(monthPrefix)) {
+                const day = parseInt(dateStr.split('-')[2]);
+                daysWithAppointments.push(day);
+            }
+        }
+        
+        return daysWithAppointments;
     }
 
     // Formattazione compatta della data per risparmiare spazio
