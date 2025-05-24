@@ -77,6 +77,11 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Initializing calendar...');
             
+            // Create cache for events by month
+            if (!window.eventCache) {
+                window.eventCache = {};
+            }
+            
             // Ensure the locale is set to English
             Datepicker.locales.en = {
                 days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
@@ -131,10 +136,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Carica eventi per oggi
             loadEventsForDate(selectedDate);
             
-            // Load events for current month to show indicators
+            // Load events for current month to show indicators - only once at init
             const currentYear = today.getFullYear();
             const currentMonth = today.getMonth() + 1; // JavaScript months are 0-based
-            fetchEventsForMonth(currentYear, currentMonth);
+            const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+            
+            // Only fetch if not already in cache
+            fetchEventsForMonth(currentYear, currentMonth, true);
             
             // Listener per cambio data
             calendarMonthDiv.addEventListener('changeDate', function(e) {
@@ -173,9 +181,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const year = dateObj.getFullYear();
                 const month = dateObj.getMonth() + 1; // JavaScript months are 0-based
                 
-                // Fetch events for the new month
-                fetchEventsForMonth(year, month);
+                // Fetch events for the new month if not already in cache
+                fetchEventsForMonth(year, month, true);
             });
+            
+            // Set up a single observer for calendar changes
+            setupCalendarObserver();
             
             console.log('Calendar initialized successfully');
         } catch (error) {
@@ -183,18 +194,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Completely rewritten function to fetch and display event indicators
-    function fetchEventsForMonth(year, month) {
+    // Debounce function to limit API call frequency
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    }
+    
+    // Rewritten function to fetch and display event indicators with caching
+    function fetchEventsForMonth(year, month, forceRefresh = false) {
         // Format month with leading zero if needed
         const formattedMonth = String(month).padStart(2, '0');
+        const cacheKey = `${year}-${formattedMonth}`;
         
-        console.log(`===== FETCHING EVENTS FOR ${year}-${formattedMonth} =====`);
+        // Check if we already have this month's events in cache and not forcing refresh
+        if (!forceRefresh && window.eventCache && window.eventCache[cacheKey]) {
+            console.log(`Using cached events for ${cacheKey}`);
+            
+            // Apply cached events to calendar
+            if (window.eventCache[cacheKey].length > 0) {
+                clearEventIndicators();
+                const processedDates = processEventDates(window.eventCache[cacheKey]);
+                applyEventIndicators(processedDates);
+            }
+            return;
+        }
         
-        // Always clear existing indicators first
+        // Set a flag to avoid duplicate requests
+        if (window.fetchingMonth === cacheKey) {
+            console.log(`Already fetching events for ${cacheKey}, skipping duplicate request`);
+            return;
+        }
+        
+        window.fetchingMonth = cacheKey;
+        console.log(`Fetching events for ${cacheKey} from server`);
+        
+        // Always clear existing indicators first - CRITICAL FIX
         clearEventIndicators();
         
         // Fetch events from server
-        fetch(`/api/events/month/${year}-${formattedMonth}`)
+        fetch(`/api/events/month/${cacheKey}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Server error: ${response.status}`);
@@ -202,61 +244,98 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(events => {
+                // Clear the fetching flag
+                window.fetchingMonth = null;
+                
                 if (!Array.isArray(events)) {
                     console.error('API returned non-array data:', events);
                     return;
                 }
                 
-                console.log(`Received ${events.length} events for ${year}-${formattedMonth}`);
+                // Filter out invalid events to prevent incorrect indicators
+                const validEvents = events.filter(event => event && event.start);
+                console.log(`Received ${events.length} events, ${validEvents.length} valid for ${cacheKey}`);
                 
-                // Process events to extract dates with events
-                const processedDates = processEventDates(events);
+                // Store in cache
+                if (!window.eventCache) {
+                    window.eventCache = {};
+                }
+                window.eventCache[cacheKey] = validEvents;
+                
+                if (validEvents.length === 0) return;
+                
+                // Process events to extract dates with events - with enhanced validation
+                const processedDates = processEventDates(validEvents);
                 
                 // Apply indicators to calendar days
-                applyEventIndicators(processedDates);
-                
-                // Set up retry mechanism to handle potential timing issues
-                setTimeout(() => {
-                    const markedDays = document.querySelectorAll('.datepicker-cell.has-events');
-                    if (markedDays.length === 0 && processedDates.size > 0) {
-                        console.log('No indicators were added on first attempt. Retrying...');
-                        applyEventIndicators(processedDates);
-                    }
-                }, 500);
+                if (processedDates.size > 0) {
+                    applyEventIndicators(processedDates);
+                }
             })
             .catch(error => {
+                window.fetchingMonth = null;
                 console.error('Error fetching events:', error);
+                // Ensure no phantom indicators remain on error
+                clearEventIndicators();
             });
     }
-    
-    // Helper function to extract dates from events
+
+    // Helper function to extract dates from events - improved for better validation
     function processEventDates(events) {
         const eventDates = new Set();
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
         
-        // Process each event to extract just the date part
+        // Process each event to extract just the date part with careful validation
         events.forEach(event => {
             if (event && event.start) {
                 try {
-                    // Handle different date formats
+                    // Standardize date format extraction
                     let dateStr = '';
                     if (typeof event.start === 'string') {
-                        // Handle ISO format with T separator
+                        // For ISO format with T separator (most common)
                         if (event.start.includes('T')) {
                             dateStr = event.start.split('T')[0];
                         } 
-                        // Handle format with space separator
+                        // For format with space separator
                         else if (event.start.includes(' ')) {
-                            dateStr = event.start.split(' ')[0];
+                            const parts = event.start.split(' ')[0].split('-');
+                            if (parts.length === 3) {
+                                // Ensure consistent formatting with leading zeros
+                                dateStr = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                            }
                         }
                         // Already in YYYY-MM-DD format
-                        else {
+                        else if (/^\d{4}-\d{2}-\d{2}$/.test(event.start)) {
                             dateStr = event.start;
                         }
+                        // Invalid format
+                        else {
+                            console.warn('Skipping event with invalid date format:', event.start);
+                            return;
+                        }
+                    } else if (event.start instanceof Date) {
+                        // Handle Date objects
+                        const d = event.start;
+                        dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                     }
                     
-                    if (dateStr) {
-                        eventDates.add(dateStr);
-                        console.log(`Event on ${dateStr}: ${event.title || 'Unnamed event'}`);
+                    // Additional validation - check if date is valid and properly formatted
+                    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                        const dateParts = dateStr.split('-');
+                        const year = parseInt(dateParts[0]);
+                        const month = parseInt(dateParts[1]);
+                        const day = parseInt(dateParts[2]);
+                        
+                        // Validate date components
+                        if (year > 1900 && year < 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                            eventDates.add(dateStr);
+                            console.log(`Valid event on ${dateStr}: ${event.title || 'Unnamed event'}`);
+                        } else {
+                            console.warn(`Skipping event with invalid date components: ${dateStr}`);
+                        }
+                    } else {
+                        console.warn(`Skipping event with malformed date: ${dateStr}`);
                     }
                 } catch (e) {
                     console.error('Error processing event date:', e, event);
@@ -264,23 +343,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        console.log(`Processed ${eventDates.size} unique dates with events:`, Array.from(eventDates));
+        console.log(`Processed ${eventDates.size} unique valid dates with events:`, Array.from(eventDates));
         return eventDates;
     }
-    
-    // Clear all event indicators
+
+    // Clear all event indicators - strengthened to ensure complete cleanup
     function clearEventIndicators() {
         if (!calendarMonthDiv) return;
         
-        const daysWithIndicators = calendarMonthDiv.querySelectorAll('.has-events');
+        // More thorough cleaning - get ALL cells that might have indicators
+        const daysWithIndicators = document.querySelectorAll('.has-events');
         console.log(`Clearing ${daysWithIndicators.length} existing indicators`);
         
         daysWithIndicators.forEach(day => {
             day.classList.remove('has-events');
         });
+        
+        // Also check for any calendar cells and clean them too for redundancy
+        const allCalendarCells = document.querySelectorAll('.datepicker-cell');
+        allCalendarCells.forEach(cell => {
+            if (cell.classList.contains('has-events')) {
+                cell.classList.remove('has-events');
+            }
+        });
     }
-    
-    // Apply event indicators to calendar cells - improved with multiple approaches
+
+    // Apply event indicators to calendar cells - improved with more precise date matching
     function applyEventIndicators(eventDates) {
         if (!calendarMonthDiv || !eventDates || eventDates.size === 0) {
             console.log('No dates to mark or calendar not available');
@@ -304,6 +392,27 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log(`Found ${dayCells.length} total day cells in calendar`);
         
+        // Extract the current month and year from the calendar header for validation
+        let currentViewMonth, currentViewYear;
+        const header = calendarMonthDiv.querySelector('.datepicker-header');
+        
+        if (header) {
+            const headerText = header.textContent.trim();
+            const match = headerText.match(/([A-Za-z]+)\s+(\d{4})/);
+            if (match) {
+                const monthName = match[1];
+                currentViewYear = parseInt(match[2]);
+                // Map month name to month number
+                const monthIndex = [
+                    "January","February","March","April","May","June",
+                    "July","August","September","October","November","December"
+                ].findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+                if (monthIndex >= 0) {
+                    currentViewMonth = monthIndex + 1;
+                }
+            }
+        }
+        
         // Debug - show what dates are available in the calendar
         const availableDates = new Set();
         dayCells.forEach(cell => {
@@ -312,35 +421,73 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         console.log('Available dates in calendar:', Array.from(availableDates));
+        console.log('Events dates to mark:', Array.from(eventDates));
         
-        // Mark days that have events
+        // Mark days that have events - with additional validation
         let indicatorsAdded = 0;
         
         dayCells.forEach(cell => {
-            // Skip days from previous/next months
+            // Skip days from previous/next months to avoid incorrect indicators
             if (cell.classList.contains('prev') || cell.classList.contains('next')) {
                 return;
             }
             
             const cellDate = cell.dataset.date;
-            if (cellDate && eventDates.has(cellDate)) {
-                cell.classList.add('has-events');
-                indicatorsAdded++;
-                console.log(`✓ Added indicator to ${cellDate}`);
+            
+            // Ensure date format is valid before comparison
+            if (cellDate && /^\d{4}-\d{2}-\d{2}$/.test(cellDate)) {
+                // Extra validation - only add indicators to dates in the current view month
+                if (currentViewMonth && currentViewYear) {
+                    const cellParts = cellDate.split('-');
+                    const cellYear = parseInt(cellParts[0]);
+                    const cellMonth = parseInt(cellParts[1]);
+                    
+                    // Skip if the cell is not in the current view month/year
+                    if (cellYear !== currentViewYear || cellMonth !== currentViewMonth) {
+                        return;
+                    }
+                }
+                
+                // Exact matching of dates
+                if (eventDates.has(cellDate)) {
+                    cell.classList.add('has-events');
+                    indicatorsAdded++;
+                    console.log(`✓ Added indicator to ${cellDate}`);
+                }
+            } else if (cellDate) {
+                console.warn(`Cell has invalid date format: ${cellDate}`);
             }
         });
         
         console.log(`Added indicators to ${indicatorsAdded} days out of ${eventDates.size} event dates`);
         
-        // Force re-render if no indicators were added
+        // If no indicators were added but we have events, use fallback method only for current month cells
         if (indicatorsAdded === 0 && eventDates.size > 0) {
-            console.warn('Failed to add any indicators despite having events');
+            console.warn('Failed to add any indicators despite having events - using fallback method');
             
-            // Last resort - try marking days by innerText number
-            const eventDaysArray = Array.from(eventDates).map(dateStr => parseInt(dateStr.split('-')[2]));
+            // Extract just the day numbers from event dates
+            const eventDaysArray = [];
+            eventDates.forEach(dateStr => {
+                // Only include days from the current view month/year
+                if (currentViewMonth && currentViewYear) {
+                    const dateParts = dateStr.split('-');
+                    const eventYear = parseInt(dateParts[0]);
+                    const eventMonth = parseInt(dateParts[1]);
+                    const eventDay = parseInt(dateParts[2]);
+                    
+                    if (eventYear === currentViewYear && eventMonth === currentViewMonth) {
+                        eventDaysArray.push(eventDay);
+                    }
+                } else {
+                    // If we can't determine current view, use the day part directly
+                    eventDaysArray.push(parseInt(dateStr.split('-')[2]));
+                }
+            });
+            
             console.log('Attempting to mark days by their number:', eventDaysArray);
             
             dayCells.forEach(cell => {
+                // Only process cells that are in the current month view (not prev/next month)
                 if (!cell.classList.contains('prev') && !cell.classList.contains('next')) {
                     const dayNum = parseInt(cell.innerText.trim());
                     if (!isNaN(dayNum) && eventDaysArray.includes(dayNum)) {
@@ -352,24 +499,201 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Helper function to get days with appointments in a month from localStorage
-    function getDaysWithAppointmentsInMonth(year, month) {
-        const all = JSON.parse(localStorage.getItem('appointments') || '{}');
-        const daysWithAppointments = [];
+    // Replace the multiple observer setup with a single, more efficient one
+    function setupCalendarObserver() {
+        if (!calendarMonthDiv) return;
         
-        // Format month with leading zero
-        const formattedMonth = String(month).padStart(2, '0');
-        const monthPrefix = `${year}-${formattedMonth}-`;
-        
-        // Check each day in localStorage
-        for (const dateStr in all) {
-            if (dateStr.startsWith(monthPrefix)) {
-                const day = parseInt(dateStr.split('-')[2]);
-                daysWithAppointments.push(day);
-            }
+        // Disconnect any existing observer
+        if (window._calendarGridObserver) {
+            window._calendarGridObserver.disconnect();
+            console.log('Disconnected previous calendar observer');
         }
         
-        return daysWithAppointments;
+        // Target the view that changes when month navigation occurs
+        const target = calendarMonthDiv.querySelector('.datepicker-view') || calendarMonthDiv;
+        if (!target) return;
+        
+        // Create a debounced version of the update function
+        const debouncedUpdate = debounce(() => {
+            // Get current visible month and year from the calendar
+            const header = calendarMonthDiv.querySelector('.datepicker-header');
+            let year, month;
+            
+            if (header) {
+                // Try to extract month and year from header text (e.g., "June 2024")
+                const headerText = header.textContent.trim();
+                const match = headerText.match(/([A-Za-z]+)\s+(\d{4})/);
+                if (match) {
+                    const monthName = match[1];
+                    year = parseInt(match[2]);
+                    
+                    // Map month name to month number
+                    const monthIndex = [
+                        "January","February","March","April","May","June",
+                        "July","August","September","October","November","December"
+                    ].findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+                    
+                    if (monthIndex >= 0) {
+                        month = monthIndex + 1;
+                    }
+                }
+            }
+            
+            // Fallback: use selectedDate if header parsing fails
+            if (!year || !month) {
+                const d = selectedDate ? new Date(selectedDate) : new Date();
+                year = d.getFullYear();
+                month = d.getMonth() + 1;
+            }
+            
+            // Check if we need to update indicators from cache
+            const cacheKey = `${year}-${String(month).padStart(2, '0')}`;
+            
+            // Apply cache if available without fetching
+            if (window.eventCache && window.eventCache[cacheKey]) {
+                console.log(`Observer: Using cached events for ${cacheKey}`);
+                
+                // Apply cached events to calendar
+                clearEventIndicators();
+                const processedDates = processEventDates(window.eventCache[cacheKey]);
+                applyEventIndicators(processedDates);
+            }
+        }, 300); // Debounce with 300ms delay
+        
+        window._calendarGridObserver = new MutationObserver((mutations) => {
+            // Only process if we have relevant mutations (class or structure changes)
+            const relevantChange = mutations.some(mutation => 
+                mutation.type === 'childList' || 
+                (mutation.type === 'attributes' && mutation.attributeName === 'class')
+            );
+            
+            if (relevantChange) {
+                console.log('Relevant calendar change detected');
+                debouncedUpdate();
+            }
+        });
+        
+        // Use a more specific configuration
+        window._calendarGridObserver.observe(target, { 
+            childList: true,    // Watch for added/removed nodes
+            attributes: true,   // Watch for attribute changes
+            attributeFilter: ['class'], // Only care about class changes
+            subtree: false      // Don't need to watch all descendants
+        });
+        
+        console.log('Calendar observer configured successfully');
+    }
+
+    // Completely replace the old observeCalendarGrid function
+    function observeCalendarGrid() {
+        // Just call the new setup function for compatibility with existing code
+        setupCalendarObserver();
+    }
+
+    // Modified function to update event cache when a new event is added/updated
+    function handleEventSubmit(e) {
+        e.preventDefault();
+        
+        if (!eventTitle || !eventStart || !eventEnd || !eventLocation) return;
+        
+        const title = eventTitle.value.trim();
+        let start, end;
+        
+        // Get date values from flatpickr if available
+        if (eventStart._flatpickr) {
+            const startDate = eventStart._flatpickr.selectedDates[0];
+            start = startDate.toISOString();
+        } else {
+            start = new Date(eventStart.value).toISOString();
+        }
+        
+        if (eventEnd._flatpickr) {
+            const endDate = eventEnd._flatpickr.selectedDates[0];
+            end = endDate.toISOString();
+        } else {
+            end = new Date(eventEnd.value).toISOString();
+        }
+        
+        const location = eventLocation.value;
+        
+        // Check if we're updating an existing event or creating a new one
+        const eventId = eventForm.getAttribute('data-event-id');
+        const isUpdate = !!eventId;
+        
+        console.log(`${isUpdate ? 'Updating' : 'Creating'} event: ${title} from ${start} to ${end} at ${location}`);
+        
+        if (title && start && end && location) {
+            // Show loading state
+            const submitBtn = eventForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = isUpdate ? 'Updating...' : 'Saving...';
+            
+            // Prepare the event data
+            const eventData = {
+                title,
+                start,
+                end,
+                location
+            };
+            
+            // Determine API endpoint and method based on whether we're updating or creating
+            const url = isUpdate ? `/api/events/${eventId}` : '/api/events';
+            const method = isUpdate ? 'PUT' : 'POST';
+            
+            // Send to API
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(eventData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(`Server error: ${errData.error || response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(`Event ${isUpdate ? 'updated' : 'created'} successfully:`, data);
+                // Reset form and close modal
+                closeEventModal();
+                
+                // Extract date for display update and cache invalidation
+                const eventDate = new Date(data.start);
+                const eventYear = eventDate.getFullYear();
+                const eventMonth = eventDate.getMonth() + 1;
+                const eventMonthKey = `${eventYear}-${String(eventMonth).padStart(2, '0')}`;
+                const eventDateStr = eventDate.toISOString().split('T')[0];
+                
+                console.log(`Event date for refresh: ${eventDateStr}, month key: ${eventMonthKey}`);
+                
+                // Invalidate cache for this month to ensure fresh data
+                if (window.eventCache) {
+                    delete window.eventCache[eventMonthKey];
+                }
+                
+                // Fetch fresh events for this month
+                fetchEventsForMonth(eventYear, eventMonth, true);
+                
+                // If we're viewing the date where the event was added/updated, update the list
+                if (selectedDate === eventDateStr) {
+                    loadEventsForDate(selectedDate);
+                }
+            })
+            .catch(error => {
+                console.error(`Error ${isUpdate ? 'updating' : 'creating'} event:`, error);
+                alert(`Error ${isUpdate ? 'updating' : 'creating'} event: ${error.message}. Please try again.`);
+            })
+            .finally(() => {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        }
     }
 
     // Formattazione compatta della data per risparmiare spazio
@@ -617,6 +941,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     btn.disabled = true;
                     
+                    // Find the event to get its date before deletion (for cache invalidation)
+                    const eventToDelete = events.find(evt => evt.id === eventId);
+                    let eventMonthKey = null;
+                    
+                    if (eventToDelete && eventToDelete.start) {
+                        const eventDate = new Date(eventToDelete.start);
+                        const eventYear = eventDate.getFullYear();
+                        const eventMonth = eventDate.getMonth() + 1;
+                        eventMonthKey = `${eventYear}-${String(eventMonth).padStart(2, '0')}`;
+                    }
+                    
                     fetch(`/api/events/${eventId}`, {
                         method: 'DELETE',
                         headers: {
@@ -635,6 +970,40 @@ document.addEventListener('DOMContentLoaded', function() {
                             const listItem = btn.closest('li');
                             listItem.style.opacity = '0.5';
                             listItem.style.height = listItem.offsetHeight + 'px';
+                            
+                            // If we know which month this event was in, invalidate that cache
+                            if (eventMonthKey && window.eventCache) {
+                                console.log(`Invalidating cache for ${eventMonthKey} after deletion`);
+                                delete window.eventCache[eventMonthKey];
+                                
+                                // Get the current month/year from the calendar
+                                const header = calendarMonthDiv.querySelector('.datepicker-header');
+                                if (header) {
+                                    const headerText = header.textContent.trim();
+                                    const match = headerText.match(/([A-Za-z]+)\s+(\d{4})/);
+                                    if (match) {
+                                        const monthName = match[1];
+                                        const year = parseInt(match[2]);
+                                        const monthIndex = [
+                                            "January","February","March","April","May","June",
+                                            "July","August","September","October","November","December"
+                                        ].findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+                                        
+                                        if (monthIndex >= 0) {
+                                            const currentMonth = monthIndex + 1;
+                                            const currentMonthKey = `${year}-${String(currentMonth).padStart(2, '0')}`;
+                                            
+                                            // If the deleted event was in the currently displayed month,
+                                            // refresh the calendar indicators
+                                            if (currentMonthKey === eventMonthKey) {
+                                                setTimeout(() => {
+                                                    fetchEventsForMonth(year, currentMonth, true);
+                                                }, 300);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             
                             // Animate removal
                             setTimeout(() => {
@@ -744,99 +1113,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitBtn.classList.remove('update-mode');
                 }
             }
-        }
-    }
-
-    // Handle event form submission - modified to handle both create and update
-    function handleEventSubmit(e) {
-        e.preventDefault();
-        
-        if (!eventTitle || !eventStart || !eventEnd || !eventLocation) return;
-        
-        const title = eventTitle.value.trim();
-        let start, end;
-        
-        // Get date values from flatpickr if available
-        if (eventStart._flatpickr) {
-            const startDate = eventStart._flatpickr.selectedDates[0];
-            start = startDate.toISOString();
-        } else {
-            start = new Date(eventStart.value).toISOString();
-        }
-        
-        if (eventEnd._flatpickr) {
-            const endDate = eventEnd._flatpickr.selectedDates[0];
-            end = endDate.toISOString();
-        } else {
-            end = new Date(eventEnd.value).toISOString();
-        }
-        
-        const location = eventLocation.value;
-        
-        // Check if we're updating an existing event or creating a new one
-        const eventId = eventForm.getAttribute('data-event-id');
-        const isUpdate = !!eventId;
-        
-        console.log(`${isUpdate ? 'Updating' : 'Creating'} event: ${title} from ${start} to ${end} at ${location}`);
-        
-        if (title && start && end && location) {
-            // Show loading state
-            const submitBtn = eventForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = isUpdate ? 'Updating...' : 'Saving...';
-            
-            // Prepare the event data
-            const eventData = {
-                title,
-                start,
-                end,
-                location
-            };
-            
-            // Determine API endpoint and method based on whether we're updating or creating
-            const url = isUpdate ? `/api/events/${eventId}` : '/api/events';
-            const method = isUpdate ? 'PUT' : 'POST';
-            
-            // Send to API
-            fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(eventData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errData => {
-                        throw new Error(`Server error: ${errData.error || response.statusText}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log(`Event ${isUpdate ? 'updated' : 'created'} successfully:`, data);
-                // Reset form and close modal
-                closeEventModal();
-                
-                // Extract date for display update
-                const eventDate = new Date(data.start).toISOString().split('T')[0];
-                console.log(`Event date for refresh: ${eventDate}, current selected date: ${selectedDate}`);
-                
-                // If we're viewing the date where the event was added/updated, update the list
-                if (selectedDate === eventDate) {
-                    loadEventsForDate(selectedDate);
-                }
-            })
-            .catch(error => {
-                console.error(`Error ${isUpdate ? 'updating' : 'creating'} event:`, error);
-                alert(`Error ${isUpdate ? 'updating' : 'creating'} event: ${error.message}. Please try again.`);
-            })
-            .finally(() => {
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            });
         }
     }
 
@@ -1753,6 +2029,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 sendBtn.disabled = false;
                 renameChatBtn.disabled = false;
                 deleteChatBtn.disabled = false;
+
+                // Explicitly enable the message input and send button
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+
+                // Focus on the message input to allow immediate typing
+                messageInput.focus();
                 
                 renderMessages(chat.messages);
                 scrollToBottom();

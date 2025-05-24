@@ -301,51 +301,51 @@ button:disabled {
     border: none !important;
     background: rgba(255, 255, 255, 0.08) !important;
     position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 /* Event indicator dot for calendar days - ENHANCED */
 .datepicker .datepicker-cell.has-events {
+    position: relative;
     overflow: visible !important; /* Ensure indicator isn't clipped */
-    border: 2px solid #ff5733 !important; /* Bright orange border */
 }
 
 .datepicker .datepicker-cell.has-events::after {
     content: '' !important;
     position: absolute !important;
-    bottom: 2px !important;
+    bottom: 2px !important; /* Position at the bottom of the cell */
     left: 50% !important;
     transform: translateX(-50%) !important;
-    width: 8px !important; /* Larger size */
-    height: 8px !important;
+    width: 6px !important; /* Slightly smaller */
+    height: 6px !important;
     border-radius: 50% !important;
     background-color: #ff5733 !important; /* Bright orange */
     display: block !important;
-    box-shadow: 0 0 5px #ff5733 !important; /* Glow effect */
-    z-index: 100 !important; /* Very high z-index */
+    box-shadow: 0 0 4px rgba(255, 87, 51, 0.7) !important; /* Softer glow */
+    z-index: 5 !important; /* Lower z-index to stay below the number */
+}
+
+/* Alternative styling without using ::after */
+.datepicker .datepicker-cell.has-events {
+    border-bottom: 2px solid #ff5733 !important; /* Add bottom border instead of dot */
 }
 
 /* When day is selected and has events */
 .datepicker .datepicker-cell.selected.has-events::after {
     background-color: white !important;
-    width: 5px;
-    height: 5px;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5) !important;
+    width: 5px !important;
+    height: 5px !important;
+    bottom: 2px !important;
 }
 
 /* When today has events */
 .datepicker .datepicker-cell.today.has-events::after {
-    content: '' !important;
-    position: absolute !important;
-    bottom: 2px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 8px !important; /* Larger */
-    height: 8px !important; /* Larger */
-    border-radius: 50% !important;
     background-color: #ff5733 !important;
-    display: block !important;
-    box-shadow: 0 0 5px #ff5733 !important; /* Glow effect */
-    z-index: 100 !important; /* Ensure it's on top */
+    opacity: 1 !important;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.9) !important;
+    bottom: 2px !important;
 }
 
 /* Giorni disabilitati (fuori dal mese corrente) */

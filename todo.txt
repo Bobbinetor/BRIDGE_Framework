@@ -2,7 +2,7 @@
 2) ✓ Fix the pagina iniziale con abilitazione già nuova chat
 3) ✓ Abilitare la responsive app per il cellulare
 4) ✓ Mettere un pulsante stop di lettura del modello
-5) Rimuovere la lettura del markdown di kokoro
+5) ✓ Rimuovere la lettura del markdown di kokoro
 6) ✓ Implementare il calendario nella sidebar laterale
 7) ✓ Salvataggio eventi calendario nel database e condivisione tra utenti
 

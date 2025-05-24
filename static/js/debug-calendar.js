@@ -1,36 +1,20 @@
 /**
  * Calendar Debugger Script
  * This script helps diagnose issues with calendar event indicators
+ * but runs silently without visible UI elements
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Calendar debugger loaded');
+    console.log('Calendar debugger loaded - silent mode');
     
-    // Wait for calendar to be fully initialized
+    // Wait for calendar to be fully initialized, then run debug silently
     setTimeout(debugCalendar, 2000);
     
-    // Add a button to manually trigger debugging
-    const debugBtn = document.createElement('button');
-    debugBtn.textContent = 'Debug Calendar';
-    debugBtn.style.position = 'fixed';
-    debugBtn.style.bottom = '10px';
-    debugBtn.style.right = '10px';
-    debugBtn.style.zIndex = '9999';
-    debugBtn.style.padding = '5px 10px';
-    debugBtn.style.backgroundColor = '#ff5733';
-    debugBtn.style.color = 'white';
-    debugBtn.style.border = 'none';
-    debugBtn.style.borderRadius = '4px';
-    debugBtn.style.cursor = 'pointer';
-    
-    debugBtn.addEventListener('click', function() {
-        debugCalendar();
-        
-        // Also try to fix indicators
-        fixCalendarIndicators();
-    });
-    
-    document.body.appendChild(debugBtn);
+    // No longer adding a visible debug button
+    // Instead, expose the debug functions to the global scope for console access
+    window.debugCalendar = debugCalendar;
+    window.fixCalendarIndicators = fixCalendarIndicators;
+    window.cleanAllIndicators = cleanAllIndicators; // New function to force clean all indicators
 });
 
 function debugCalendar() {
@@ -69,12 +53,13 @@ function debugCalendar() {
     console.log('Days with indicators:', daysWithIndicators.length);
     
     if (daysWithIndicators.length > 0) {
-        console.log('Sample of days with indicators:');
-        Array.from(daysWithIndicators).slice(0, 5).forEach((cell, i) => {
+        console.log('All days with indicators:');
+        Array.from(daysWithIndicators).forEach((cell, i) => {
             console.log(`Indicator ${i}:`, {
                 text: cell.innerText,
                 'data-date': cell.dataset.date,
-                classes: cell.className
+                classes: cell.className,
+                isCurrentMonth: !cell.classList.contains('prev') && !cell.classList.contains('next')
             });
         });
     }
@@ -91,10 +76,29 @@ function debugCalendar() {
         'color': computedStyle.getPropertyValue('--indicator-color'),
         'display': computedStyle.getPropertyValue('--indicator-display')
     });
+    
+    // Check event API responses for current month
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    
+    fetch(`/api/events/month/${year}-${month}`)
+        .then(response => response.json())
+        .then(events => {
+            console.log(`API returned ${events.length} events for current month`);
+            if (events.length > 0) {
+                console.log('Sample event:', events[0]);
+                console.log('Event dates:', events.map(e => e.start?.split('T')[0] || e.start?.split(' ')[0]));
+            }
+        })
+        .catch(err => console.error('Error fetching events for debugging:', err));
 }
 
 function fixCalendarIndicators() {
     console.log('Attempting to fix calendar indicators...');
+    
+    // First clean all indicators
+    cleanAllIndicators();
     
     const calendarMonthDiv = document.getElementById('calendar-month');
     if (!calendarMonthDiv) return;
@@ -111,27 +115,35 @@ function fixCalendarIndicators() {
     } else {
         console.warn('fetchEventsForMonth function not found');
     }
+}
+
+// New function to force clean all indicators everywhere
+function cleanAllIndicators() {
+    console.log('Force cleaning ALL event indicators...');
     
-    // Manual fallback: add indicators to a few days
-    const dayCells = calendarMonthDiv.querySelectorAll('.datepicker-cell.day');
-    if (dayCells.length > 0) {
-        console.log('Adding test indicators to some days...');
+    // Clean every element with .has-events class in the entire document
+    const allIndicators = document.querySelectorAll('.has-events');
+    console.log(`Found ${allIndicators.length} indicators to clean`);
+    
+    allIndicators.forEach(el => {
+        el.classList.remove('has-events');
+        console.log('Removed indicator from element:', el);
+    });
+    
+    // For calendar cells specifically
+    const calendarMonthDiv = document.getElementById('calendar-month');
+    if (calendarMonthDiv) {
+        // Get all cells in the calendar
+        const allCells = calendarMonthDiv.querySelectorAll('.datepicker-cell');
         
-        // Add to days 5, 10, 15, 20, 25
-        const testDays = [5, 10, 15, 20, 25];
-        
-        dayCells.forEach(cell => {
-            if (!cell.classList.contains('prev') && !cell.classList.contains('next')) {
-                const dayNum = parseInt(cell.innerText.trim());
-                if (!isNaN(dayNum) && testDays.includes(dayNum)) {
-                    cell.classList.add('has-events');
-                    
-                    // Add a visible marker for debugging
-                    cell.style.border = '2px solid red';
-                    
-                    console.log(`Added test indicator to day ${dayNum}`);
-                }
+        // Remove has-events class from all cells
+        allCells.forEach(cell => {
+            if (cell.classList.contains('has-events')) {
+                cell.classList.remove('has-events');
+                console.log('Removed indicator from calendar cell:', cell.innerText, cell.dataset.date);
             }
         });
     }
+    
+    return 'All indicators cleaned!';
 }
