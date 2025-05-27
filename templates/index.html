@@ -67,6 +67,21 @@
                         <option value="de">Deutsch</option>
                     </select>
                 </div>
+                <!-- Notification bell -->
+                <div class="notification-bell-container">
+                    <button id="notification-bell" class="action-btn" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span id="notification-badge" style="display:none;"></span>
+                    </button>
+                    <div id="notification-menu" class="notification-menu">
+                        <div class="notification-menu-header">
+                            <span>Notifications</span>
+                        </div>
+                        <ul id="notification-list" class="notification-list">
+                            <!-- Notifications will be rendered here -->
+                        </ul>
+                    </div>
+                </div>
                 <button id="rename-chat-btn" class="action-btn" title="Rename Chat" disabled>
                     <i class="fas fa-edit"></i>
                 </button>

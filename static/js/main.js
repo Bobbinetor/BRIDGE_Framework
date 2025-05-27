@@ -45,6 +45,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const eventLocation = document.getElementById('event-location');
     const cancelEventBtn = document.getElementById('cancel-event-btn');
     
+    // Notification bell elements
+    const notificationBell = document.getElementById('notification-bell');
+    const notificationMenu = document.getElementById('notification-menu');
+    const notificationList = document.getElementById('notification-list');
+    const notificationBadge = document.getElementById('notification-badge');
+
     // Application state
     let currentChatId = null;
     let chats = [];
@@ -1338,6 +1344,345 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Initialize app
+    function init() {
+        // Set the language selector to the default value or saved preference
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        if (savedLanguage) {
+            currentLanguage = savedLanguage;
+            languageSelector.value = savedLanguage;
+        }
+        
+        // Improve the "Add event" button appearance
+        if (addEventBtn) {
+            // Change text to "Add event"
+            addEventBtn.innerHTML = '<i class="fas fa-plus"></i> Add event';
+            // Apply theme-appropriate styling
+            addEventBtn.classList.add('themed-button');
+            // Use primary theme color
+            addEventBtn.style.backgroundColor = 'var(--primary-color, #1E88E5)';
+            addEventBtn.style.color = 'white';
+            addEventBtn.style.border = 'none';
+            addEventBtn.style.padding = '8px 12px';
+            addEventBtn.style.borderRadius = '4px';
+            addEventBtn.style.cursor = 'pointer';
+            addEventBtn.style.fontWeight = '500';
+            addEventBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            
+            // Add hover effect
+            addEventBtn.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--primary-dark, #1565C0)';
+                this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+            });
+            
+            addEventBtn.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'var(--primary-color, #1E88E5)';
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            });
+            
+            console.log('Event button styled and renamed to "Add event"');
+        }
+        
+        // Set the current user ID from a global variable
+        try {
+            // Try to get from the global variable that should be set in the HTML template
+            if (typeof currentUserId !== 'undefined' && currentUserId) {
+                current_user.id = currentUserId;
+                console.log('Current user ID initialized from template:', current_user.id);
+            } else {
+                // If not available in the template, try to fetch it from the server
+                fetchCurrentUser();
+            }
+        } catch (e) {
+            console.error('Error initializing current user:', e);
+            // Try to fetch from server as a fallback
+            fetchCurrentUser();
+        }
+
+        fetchChats();
+        setupEventListeners();
+        adjustTextareaHeight();
+        document.body.addEventListener('click', initAudioContext, { once: true });
+        connectWebSocket(); // Establish WebSocket connection
+        
+        // Auto-create a new chat if there are no chats
+        setTimeout(() => {
+            if (chats.length === 0) {
+                createNewChat();
+            }
+        }, 500);
+
+        // Check if we're on mobile and show appropriate UI
+        checkIfMobile();
+        window.addEventListener('resize', checkIfMobile);
+
+        // Inizializza il calendario
+        setTimeout(initCalendar, 500);
+
+        // Set up appointment modal event listeners
+        if (appointmentForm) {
+            appointmentForm.addEventListener('submit', handleAppointmentSubmit);
+        }
+        
+        if (cancelAppointmentBtn) {
+            cancelAppointmentBtn.addEventListener('click', closeAppointmentModal);
+        }
+
+        // Set up event modal event listeners
+        if (eventForm) {
+            eventForm.addEventListener('submit', handleEventSubmit);
+            console.log('Event form submit listener added');
+        } else {
+            console.warn('Event form not found during initialization');
+        }
+        
+        if (cancelEventBtn) {
+            cancelEventBtn.addEventListener('click', closeEventModal);
+            console.log('Cancel event button listener added');
+        } else {
+            console.warn('Cancel event button not found during initialization');
+        }
+        
+        // Add a check for the modal elements
+        console.log('Event modal elements check:');
+        console.log('- eventModal:', !!eventModal);
+        console.log('- eventTitle:', !!eventTitle);
+        console.log('- eventForm:', !!eventForm);
+
+        // Set document language to English to influence all datetime pickers
+        document.documentElement.lang = 'en';
+        
+        // Override navigator language for date pickers (where possible)
+        try {
+            // This is a non-standard approach that might work in some browsers
+            Object.defineProperty(navigator, 'language', {
+                get: function() { return 'en-US'; }
+            });
+            
+            if (navigator.languages) {
+                Object.defineProperty(navigator, 'languages', {
+                    get: function() { return ['en-US', 'en']; }
+                });
+            }
+        } catch (e) {
+            console.warn('Could not override navigator language:', e);
+        }
+    }
+
+    // Function to fetch current user info if not provided in the template
+    function fetchCurrentUser() {
+        console.log('Fetching current user info from server...');
+        fetch('/api/user/current')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch current user');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.id) {
+                    current_user.id = data.id;
+                    console.log('Current user ID fetched from server:', current_user.id);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching current user:', error);
+                // Use a fallback ID that won't match any events
+                current_user.id = -1;
+            });
+    }
+
+    function initAudioContext() {
+        if (!audioContext) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log("AudioContext initialized.");
+            } catch (e) {
+                console.error("Error initializing AudioContext:", e);
+                alert("Audio playback might not work in this browser.");
+            }
+        }
+    }
+    
+    // Establish WebSocket Connection
+    function connectWebSocket() {
+        socket = io();
+
+        socket.on('connect', () => {
+            console.log('WebSocket connected:', socket.id);
+            // Initialize speech recognition after socket connection
+            initSpeechRecognition();
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('WebSocket disconnected:', reason);
+            isRecording = false;
+            updateVoiceModeUI();
+            alert('Lost connection to the server. Please refresh the page.');
+        });
+
+        socket.on('voice_started', (data) => {
+            console.log('Server ready for audio:', data.message);
+        });
+
+        socket.on('processing_voice', (data) => {
+            console.log('Server processing voice:', data.message);
+            showProcessingIndicator(data.message || 'Processing voice...');
+        });
+
+        socket.on('transcript_result', (data) => {
+            console.log('Transcript:', data.transcript);
+        });
+
+        socket.on('new_message', (message) => {
+            console.log('New message received:', message);
+            renderMessage(message);
+            scrollToBottom();
+        });
+
+        socket.on('audio_response', (data) => {
+            console.log(`Received audio response: ${data.audio.byteLength} bytes, type: ${data.mime_type}`);
+            hideProcessingIndicator();
+            const audioBlob = new Blob([data.audio], { type: data.mime_type });
+            playAudioBlob(audioBlob);
+        });
+
+        socket.on('voice_interaction_complete', (data) => {
+            console.log('Voice interaction complete:', data.message);
+            hideProcessingIndicator();
+        });
+
+        socket.on('voice_error', (data) => {
+            console.error('Voice Error:', data.error);
+            hideProcessingIndicator();
+            renderSystemMessage(`Voice Error: ${data.error}`, 'error');
+            if (isRecording) {
+                isRecording = false;
+                updateVoiceModeUI();
+            }
+        });
+    }
+
+    // Initialize Web Speech API recognition
+    function initSpeechRecognition() {
+        // Check if browser supports speech recognition
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.error("Speech recognition not supported in this browser");
+            alert("Il tuo browser non supporta il riconoscimento vocale. Prova con Chrome o Edge.");
+            return;
+        }
+
+        // Create speech recognition object
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        speechRecognition = new SpeechRecognition();
+        
+        // Configure speech recognition
+        speechRecognition.lang = 'it-IT'; // Set to Italian
+        speechRecognition.continuous = false; // Stop after one utterance
+        speechRecognition.interimResults = false; // We want only final results
+        
+        // Handle recognition results
+        speechRecognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            console.log("Speech recognized:", transcript);
+            
+            // If we're in a voice interaction (button is active), send the transcript
+            if (isRecording && currentChatId && socket && socket.connected) {
+                // Instead of collecting audio chunks, send the transcript directly
+                socket.emit('voice_transcript', { 
+                    chat_id: currentChatId,
+                    transcript: transcript,
+                    language: currentLanguage
+                });
+                
+                // Show processing indicator
+                showProcessingIndicator("Elaborazione della risposta...");
+            }
+        };
+        
+        // Handle speech recognition errors
+        speechRecognition.onerror = function(event) {
+            console.error("Speech recognition error:", event.error);
+            if (isRecording) {
+                renderSystemMessage(`Errore di riconoscimento vocale: ${event.error}`, 'error');
+                isRecording = false;
+                updateVoiceModeUI();
+            }
+        };
+        
+        // When recognition stops (either by timeout or end of speech)
+        speechRecognition.onend = function() {
+            console.log("Speech recognition ended");
+            isRecording = false;
+            updateVoiceModeUI();
+        };
+        
+        console.log("Speech recognition initialized");
+    }
+
+    // --- Notification logic ---
+    let notifications = []; // This will be filled later via API or other logic
+
+    function renderNotifications() {
+        notificationList.innerHTML = '';
+        if (!notifications.length) {
+            notificationList.innerHTML = '<li class="notification-empty">No notifications</li>';
+            notificationBadge.style.display = 'none';
+        } else {
+            notifications.forEach((notif, idx) => {
+                const li = document.createElement('li');
+                li.textContent = notif.text;
+                // Optionally add click handler for each notification
+                li.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent menu from closing immediately
+                    notif.read = true;
+                    notifications.splice(idx, 1);
+                    renderNotifications();
+                    // Optionally close menu after click on a notification:
+                    // notificationMenu.classList.remove('active');
+                });
+                notificationList.appendChild(li);
+            });
+            // Show badge with count
+            notificationBadge.textContent = notifications.length;
+            notificationBadge.style.display = 'inline-block';
+        }
+    }
+
+    // Toggle notification menu
+    if (notificationBell) {
+        notificationBell.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Toggle menu visibility
+            const isActive = notificationMenu.classList.contains('active');
+            // Close all other dropdowns if needed (future-proof)
+            document.querySelectorAll('.notification-menu.active').forEach(menu => {
+                if (menu !== notificationMenu) menu.classList.remove('active');
+            });
+            if (!isActive) {
+                notificationMenu.classList.add('active');
+                renderNotifications();
+            } else {
+                notificationMenu.classList.remove('active');
+            }
+        });
+    }
+    // Hide notification menu when clicking outside (not on bell or menu)
+    document.addEventListener('click', function(e) {
+        if (notificationMenu && notificationMenu.classList.contains('active')) {
+            if (
+                !notificationMenu.contains(e.target) &&
+                !notificationBell.contains(e.target)
+            ) {
+                notificationMenu.classList.remove('active');
+            }
+        }
+    });
+
+    // Example: Add a test notification on load (remove this in production)
+    notifications.push({ text: "Welcome to BRIDGE! This is a test notification.", read: false });
+
+    // --- Existing code continues ---
     // Initialize app
     function init() {
         // Set the language selector to the default value or saved preference
