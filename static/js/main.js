@@ -1623,6 +1623,52 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Notification logic ---
     let notifications = []; // This will be filled later via API or other logic
 
+    // Show a browser notification if enabled in preferences
+    function showSystemNotification(text) {
+        // Check if notifications are enabled in preferences
+        const savedPreferences = localStorage.getItem('notificationPreferences');
+        if (savedPreferences) {
+            const preferences = JSON.parse(savedPreferences);
+            if (preferences.enableSystemNotifications && 'Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification('BRIDGE Framework', {
+                    body: text,
+                    icon: '/static/img/favicon.ico'  // You may need to adjust this path
+                });
+                
+                // Auto close based on preferences
+                setTimeout(() => {
+                    notification.close();
+                }, preferences.displayTime * 1000);
+                
+                // Play sound if enabled
+                if (preferences.enableSound) {
+                    const audio = new Audio('/static/sounds/notification.mp3');  // You'll need to add this file
+                    audio.play().catch(e => console.log('Could not play notification sound'));
+                }
+            }
+        }
+    }
+
+    // Function to add a new notification
+    function addNotification(text, type = 'default') {
+        const newNotification = {
+            text: text,
+            type: type,
+            read: false,
+            timestamp: new Date().toISOString(),
+            isHTML: text.includes('<') && text.includes('>') // Check if the text contains HTML tags
+        };
+        
+        notifications.unshift(newNotification); // Add to beginning of array
+        renderNotifications();
+        
+        // Show system notification if enabled (strip HTML for system notifications)
+        const plainText = text.replace(/<[^>]*>?/gm, '');
+        showSystemNotification(plainText);
+        
+        return newNotification;
+    }
+
     function renderNotifications() {
         notificationList.innerHTML = '';
         if (!notifications.length) {
@@ -1631,16 +1677,59 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             notifications.forEach((notif, idx) => {
                 const li = document.createElement('li');
-                li.textContent = notif.text;
-                // Optionally add click handler for each notification
-                li.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent menu from closing immediately
-                    notif.read = true;
+                li.className = `notification-item notification-${notif.type}`;
+                
+                // Handle HTML content if needed
+                if (notif.isHTML) {
+                    li.innerHTML = notif.text;
+                } else {
+                    li.textContent = notif.text;
+                }
+                
+                // Add timestamp if available
+                if (notif.timestamp) {
+                    const time = document.createElement('small');
+                    time.className = 'notification-time';
+                    time.textContent = formatTimestamp(notif.timestamp);
+                    li.appendChild(time);
+                }
+                
+                // Add buttons container
+                const buttonsContainer = document.createElement('div');
+                buttonsContainer.className = 'notification-actions';
+                
+                // Add dismiss button
+                const dismissButton = document.createElement('button');
+                dismissButton.className = 'notification-dismiss';
+                dismissButton.innerHTML = '<i class="fas fa-times"></i>';
+                dismissButton.title = 'Dismiss notification';
+                dismissButton.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent notification click
                     notifications.splice(idx, 1);
                     renderNotifications();
-                    // Optionally close menu after click on a notification:
-                    // notificationMenu.classList.remove('active');
                 });
+                
+                buttonsContainer.appendChild(dismissButton);
+                li.appendChild(buttonsContainer);
+                
+                // Add click handler for each notification
+                li.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+                        e.stopPropagation(); // Prevent menu from closing immediately
+                        notif.read = true;
+                        
+                        // For event match notifications, handle differently
+                        if (notif.type === 'event-match') {
+                            // Keep notification but mark as read by applying a class
+                            li.classList.add('notification-read');
+                        } else {
+                            // Remove standard notifications on click
+                            notifications.splice(idx, 1);
+                            renderNotifications();
+                        }
+                    }
+                });
+                
                 notificationList.appendChild(li);
             });
             // Show badge with count
@@ -1659,11 +1748,57 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.notification-menu.active').forEach(menu => {
                 if (menu !== notificationMenu) menu.classList.remove('active');
             });
+            
             if (!isActive) {
                 notificationMenu.classList.add('active');
                 renderNotifications();
             } else {
                 notificationMenu.classList.remove('active');
+            }
+        });
+    }
+    
+    // Notification settings button functionality
+    const notificationSettingsBtn = document.getElementById('notification-settings');
+    if (notificationSettingsBtn) {
+        notificationSettingsBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent menu from closing
+            
+            // Create a settings menu with options
+            const settingsOptions = document.createElement('div');
+            settingsOptions.className = 'notification-settings-options';
+            settingsOptions.innerHTML = `
+                <div class="notification-settings-option" id="clear-all-notifications">
+                    <i class="fas fa-trash-alt"></i> Clear all notifications
+                </div>
+                <div class="notification-settings-option" id="notification-preferences">
+                    <i class="fas fa-cog"></i> Notification preferences
+                </div>
+            `;
+            
+            // Remove any existing settings menu
+            const existingMenu = document.querySelector('.notification-settings-options');
+            if (existingMenu) {
+                existingMenu.remove();
+            } else {
+                // Position and append the settings menu
+                notificationMenu.appendChild(settingsOptions);
+                
+                // Add click handlers for options
+                document.getElementById('clear-all-notifications').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    // Clear all notifications
+                    notifications = [];
+                    renderNotifications();
+                    settingsOptions.remove();
+                });
+                
+                document.getElementById('notification-preferences').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    // Show notification preferences modal
+                    openNotificationPreferencesModal();
+                    settingsOptions.remove();
+                });
             }
         });
     }
@@ -1678,9 +1813,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-
-    // Example: Add a test notification on load (remove this in production)
-    notifications.push({ text: "Welcome to BRIDGE! This is a test notification.", read: false });
 
     // --- Existing code continues ---
     // Initialize app
@@ -1959,6 +2091,113 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("Speech recognition initialized");
     }
 
+    // Function to format date in a more readable way
+    function formatDateNice(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString(undefined, { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+    }
+    
+    // Function to check for matching events in same date/city as current user's events
+    function checkMatchingEvents() {
+        console.log('Checking for matching events and generating suggestions...');
+        // Show loading in notification list
+        const tempNotification = addNotification('Checking for matching events and generating suggestions...', 'info');
+        
+        fetch('/api/events/matches/suggestions')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(suggestions => {
+                // Remove loading notification
+                notifications = notifications.filter(n => n !== tempNotification);
+                
+                if (!suggestions || suggestions.length === 0) {
+                    addNotification('No matching events found with other users.', 'info');
+                    return;
+                }
+                
+                console.log(`Found ${suggestions.length} event matches with LLM suggestions`);
+                
+                // Add notifications for each suggestion
+                suggestions.forEach(suggestion => {
+                    if (suggestion.error) {
+                        addNotification(`Error generating suggestion for ${suggestion.location} on ${suggestion.date}: ${suggestion.error}`, 'error');
+                        return;
+                    }
+                    
+                    // Get event details
+                    const location = suggestion.location;
+                    const formattedDate = suggestion.formatted_date;
+                    const userEvents = suggestion.user_events || [];
+                    const matchingEvents = suggestion.matching_events || [];
+                    const usersInvolved = suggestion.users_involved || [];
+                    const llmSuggestion = suggestion.suggestion;
+                    
+                    // Create a detailed message with the LLM suggestion prominently displayed
+                    let message = `<div class="llm-suggestion">
+                        <div class="llm-suggestion-header">
+                            <i class="fas fa-lightbulb suggestion-icon"></i>
+                            <strong>Meetup Opportunity in ${location} on ${formattedDate}</strong>
+                        </div>
+                        <div class="llm-suggestion-content">
+                            "${llmSuggestion}"
+                        </div>
+                        <div class="llm-suggestion-details">
+                            <div class="contact-info-section">
+                                <h4>Contact Information</h4>
+                                <ul class="contact-list">`;
+                    
+                    // Add matching events with user emails
+                    const uniqueUsers = {};
+                    matchingEvents.forEach(event => {
+                        if (!uniqueUsers[event.username] && event.email) {
+                            uniqueUsers[event.username] = event.email;
+                            message += `<li><i class="fas fa-envelope"></i> <strong>${event.username}</strong>: <a href="mailto:${event.email}">${event.email}</a></li>`;
+                        }
+                    });
+                    
+                    message += `</ul>
+                            </div>
+                            <div class="event-mini-summary">
+                                <p><i class="fas fa-calendar"></i> You have <strong>${userEvents.length}</strong> event(s) and <strong>${matchingEvents.length}</strong> matching event(s) in ${location}.</p>
+                            </div>
+                        </div>
+                    </div>`;
+                    
+                    const notif = addNotification(message, 'llm-suggestion');
+                });
+                
+                // Add event listeners for toggles after notifications are rendered
+                setTimeout(() => {
+                    document.querySelectorAll('.details-toggle').forEach(toggle => {
+                        toggle.addEventListener('click', function() {
+                            const content = this.nextElementSibling;
+                            if (content.style.display === 'none') {
+                                content.style.display = 'block';
+                                this.textContent = 'Hide event details';
+                            } else {
+                                content.style.display = 'none';
+                                this.textContent = 'Show event details';
+                            }
+                        });
+                    });
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Error checking for matching events:', error);
+                // Remove loading notification
+                notifications = notifications.filter(n => n !== tempNotification);
+                addNotification('Error checking for matching events. Please try again.', 'error');
+            });
+    }
+    
     // Set up all event listeners
     function setupEventListeners() {
         newChatBtn.addEventListener('click', function() {
@@ -2144,6 +2383,37 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.chat-item').forEach(item => {
             item.addEventListener('click', closeMobileSidebar);
         });
+        
+        // Add event listener for check events button
+        const checkEventsBtn = document.getElementById('check-events-btn');
+        if (checkEventsBtn) {
+            checkEventsBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent menu from closing
+                checkMatchingEvents();
+            });
+        }
+        
+        // Notification preferences modal event listeners
+        const notificationPreferencesForm = document.getElementById('notification-preferences-form');
+        const cancelNotificationPreferencesBtn = document.getElementById('cancel-notification-preferences-btn');
+        
+        if (notificationPreferencesForm) {
+            notificationPreferencesForm.addEventListener('submit', saveNotificationPreferences);
+        }
+        
+        if (cancelNotificationPreferencesBtn) {
+            cancelNotificationPreferencesBtn.addEventListener('click', closeNotificationPreferencesModal);
+        }
+        
+        // Request notification permission if it's not set yet
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            // We'll request this when the user enables system notifications in preferences
+            document.getElementById('enable-system-notifications').addEventListener('change', function(e) {
+                if (e.target.checked && Notification.permission !== 'granted') {
+                    Notification.requestPermission();
+                }
+            });
+        }
     }
 
     // Toggle Recording (Modified for Web Speech API)
@@ -2666,6 +2936,57 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function closeConfirmModal() {
         confirmModal.classList.remove('active');
+    }
+    
+    // Notification preferences modal functions
+    function openNotificationPreferencesModal() {
+        const notificationPreferencesModal = document.getElementById('notification-preferences-modal');
+        notificationPreferencesModal.classList.add('active');
+        
+        // Load saved preferences if they exist
+        const savedPreferences = localStorage.getItem('notificationPreferences');
+        if (savedPreferences) {
+            const preferences = JSON.parse(savedPreferences);
+            document.getElementById('enable-all-notifications').checked = preferences.enableAll;
+            document.getElementById('enable-sound-notifications').checked = preferences.enableSound;
+            document.getElementById('enable-system-notifications').checked = preferences.enableSystemNotifications;
+            document.getElementById('notification-display-time').value = preferences.displayTime;
+        }
+    }
+    
+    function closeNotificationPreferencesModal() {
+        const notificationPreferencesModal = document.getElementById('notification-preferences-modal');
+        notificationPreferencesModal.classList.remove('active');
+    }
+    
+    function saveNotificationPreferences(e) {
+        e.preventDefault();
+        
+        // Get values from form
+        const enableAll = document.getElementById('enable-all-notifications').checked;
+        const enableSound = document.getElementById('enable-sound-notifications').checked;
+        const enableSystemNotifications = document.getElementById('enable-system-notifications').checked;
+        const displayTime = document.getElementById('notification-display-time').value;
+        
+        // Save to localStorage
+        const preferences = {
+            enableAll,
+            enableSound,
+            enableSystemNotifications,
+            displayTime
+        };
+        localStorage.setItem('notificationPreferences', JSON.stringify(preferences));
+        
+        // If system notifications are enabled, request permission
+        if (enableSystemNotifications && 'Notification' in window) {
+            Notification.requestPermission();
+        }
+        
+        // Close the modal
+        closeNotificationPreferencesModal();
+        
+        // Show a confirmation
+        renderSystemMessage("Notification preferences saved successfully.", "success");
     }
 
     // Check if we're on a mobile device and adjust the UI accordingly

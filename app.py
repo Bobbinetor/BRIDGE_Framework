@@ -126,7 +126,7 @@ class Event(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 def send_otp_email(recipient, otp):
     try:
@@ -587,7 +587,7 @@ def get_events():
             'end': event.end.isoformat(),
             'location': event.location,
             'user_id': event.user_id,
-            'username': User.query.get(event.user_id).username,
+            'username': db.session.get(User, event.user_id).username,
             'created_at': event.created_at.isoformat()
         } for event in events]
         
@@ -647,7 +647,7 @@ def create_event():
 @login_required
 def delete_event(event_id):
     """Delete an event from the shared calendar"""
-    event = Event.query.get(event_id)
+    event = db.session.get(Event, event_id)
     
     if not event:
         return jsonify({'error': 'Event not found'}), 404
@@ -668,7 +668,7 @@ def delete_event(event_id):
 @login_required
 def update_event(event_id):
     """Update an existing event in the shared calendar"""
-    event = Event.query.get(event_id)
+    event = db.session.get(Event, event_id)
     
     if not event:
         return jsonify({'error': 'Event not found'}), 404
@@ -746,7 +746,7 @@ def get_events_for_month(year, month):
                 'end': event.end.isoformat(),
                 'location': event.location,
                 'user_id': event.user_id,
-                'username': User.query.get(event.user_id).username
+                'username': db.session.get(User, event.user_id).username
             })
         
         return jsonify(event_list)
@@ -786,7 +786,7 @@ def get_events_by_month_string(yearmonth):
                 'end': event.end.isoformat(),
                 'location': event.location,
                 'user_id': event.user_id,
-                'username': User.query.get(event.user_id).username
+                'username': db.session.get(User, event.user_id).username
             })
         
         # Log for debugging
@@ -795,6 +795,201 @@ def get_events_by_month_string(yearmonth):
     except Exception as e:
         print(f"API Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# Endpoint to find matching events (same date and city) with other users
+@app.route('/api/events/matches', methods=['GET'])
+@login_required
+def get_matching_events():
+    """Find events that match the current user's events by date and location"""
+    try:
+        # Get current user's events
+        user_events = Event.query.filter_by(user_id=current_user.id).all()
+        
+        # Create a set of tuples with date and location for current user's events
+        user_event_keys = set()
+        for event in user_events:
+            # Extract just the date portion without time
+            event_date = event.start.date().isoformat()
+            user_event_keys.add((event_date, event.location))
+        
+        # Find matching events from other users
+        matches = []
+        
+        # For each user event key (date, location), find matching events from other users
+        for event_date, location in user_event_keys:
+            # Convert date string back to date object for querying
+            date_obj = datetime.strptime(event_date, '%Y-%m-%d').date()
+            
+            # Create datetime objects for start and end of day
+            start_of_day = datetime.combine(date_obj, datetime.min.time())
+            end_of_day = datetime.combine(date_obj, datetime.max.time())
+            
+            # Find events from other users on the same day and location
+            matching_events = Event.query.filter(
+                Event.user_id != current_user.id,
+                Event.location == location,
+                Event.start <= end_of_day,
+                Event.end >= start_of_day
+            ).all()
+            
+            # Add matching events to the result
+            for event in matching_events:
+                user = db.session.get(User, event.user_id)
+                matches.append({
+                    'event_id': event.id,
+                    'title': event.title,
+                    'date': event_date,
+                    'location': location,
+                    'user_id': event.user_id,
+                    'username': user.username if user else 'Unknown User',
+                    'start_time': event.start.strftime('%H:%M'),
+                    'end_time': event.end.strftime('%H:%M')
+                })
+        
+        app.logger.info(f"Found {len(matches)} matching events for user {current_user.id}")
+        return jsonify(matches)
+        
+    except Exception as e:
+        app.logger.error(f"Error finding matching events: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+# Endpoint to get LLM-generated suggestions based on matching events
+@app.route('/api/events/matches/suggestions', methods=['GET'])
+@login_required
+def get_event_match_suggestions():
+    """Get LLM-generated suggestions based on matching events"""
+    try:
+        # Get current user's events
+        user_events = Event.query.filter_by(user_id=current_user.id).all()
+        
+        # Create a dictionary of user events by date and location
+        user_events_by_key = {}
+        for event in user_events:
+            event_date = event.start.date().isoformat()
+            key = (event_date, event.location)
+            if key not in user_events_by_key:
+                user_events_by_key[key] = []
+            
+            user_events_by_key[key].append({
+                'title': event.title,
+                'start_time': event.start.strftime('%H:%M'),
+                'end_time': event.end.strftime('%H:%M')
+            })
+        
+        # Find matching events from other users
+        matches_by_key = {}
+        suggestions = []
+        
+        # For each user event key (date, location), find matching events from other users
+        for (event_date, location), user_event_list in user_events_by_key.items():
+            # Convert date string back to date object for querying
+            date_obj = datetime.strptime(event_date, '%Y-%m-%d').date()
+            
+            # Create datetime objects for start and end of day
+            start_of_day = datetime.combine(date_obj, datetime.min.time())
+            end_of_day = datetime.combine(date_obj, datetime.max.time())
+            
+            # Find events from other users on the same day and location
+            matching_events = Event.query.filter(
+                Event.user_id != current_user.id,
+                Event.location == location,
+                Event.start <= end_of_day,
+                Event.end >= start_of_day
+            ).all()
+            
+            # Group matching events by date and location
+            if not matching_events:
+                continue
+                
+            matches_by_key[(event_date, location)] = []
+            
+            # Add matching events to the result
+            for event in matching_events:
+                user = db.session.get(User, event.user_id)
+                matches_by_key[(event_date, location)].append({
+                    'title': event.title,
+                    'username': user.username if user else 'Unknown User',
+                    'email': user.email if user else '',
+                    'start_time': event.start.strftime('%H:%M'),
+                    'end_time': event.end.strftime('%H:%M')
+                })
+        
+        # Generate suggestions using LLM for each group of matching events
+        for (event_date, location), matches in matches_by_key.items():
+            date_obj = datetime.strptime(event_date, '%Y-%m-%d').date()
+            formatted_date = date_obj.strftime('%A, %B %d, %Y')  # e.g., "Monday, May 28, 2025"
+            
+            user_events_text = ""
+            for i, event in enumerate(user_events_by_key.get((event_date, location), [])):
+                user_events_text += f"- {event['title']} from {event['start_time']} to {event['end_time']}\n"
+            
+            matches_text = ""
+            users_involved = set()
+            for match in matches:
+                matches_text += f"- {match['username']} has event '{match['title']}' from {match['start_time']} to {match['end_time']}\n"
+                users_involved.add(match['username'])
+            
+            # Create prompt for LLM
+            prompt = f"""You are an assistant helping to coordinate meetings between users who have events in the same location on the same day.
+            
+Current user ({current_user.username}) has the following events in {location} on {formatted_date}:
+{user_events_text}
+
+Other users have the following events in the same location and day:
+{matches_text}
+
+Based on this information, create a friendly, brief suggestion for {current_user.username} about potentially coordinating or meeting with {', '.join(users_involved)}. 
+Include a specific suggestion about when and where they might meet considering their schedules.
+Keep the suggestion concise (maximum 3-4 sentences) and focus on the social opportunity.
+"""
+            
+            # Call Ollama API
+            try:
+                response = requests.post(
+                    OLLAMA_API_URL,
+                    json={
+                        "model": "gemma3:1b",
+                        "prompt": prompt,
+                        "stream": False
+                    }
+                )
+                
+                if response.status_code == 200:
+                    suggestion_text = response.json().get('response', 'Sorry, I could not generate a suggestion.')
+                    
+                    # Clean up the text (remove any excess newlines/formatting)
+                    suggestion_text = suggestion_text.strip()
+                    
+                    suggestions.append({
+                        'date': event_date,
+                        'formatted_date': formatted_date,
+                        'location': location,
+                        'user_events': user_events_by_key.get((event_date, location), []),
+                        'matching_events': matches,
+                        'users_involved': list(users_involved),
+                        'suggestion': suggestion_text
+                    })
+                else:
+                    app.logger.error(f"Ollama API error: {response.text}")
+                    suggestions.append({
+                        'date': event_date,
+                        'location': location,
+                        'error': f"Could not generate suggestion: API error"
+                    })
+            except Exception as e:
+                app.logger.error(f"Error calling Ollama API: {str(e)}")
+                suggestions.append({
+                    'date': event_date,
+                    'location': location,
+                    'error': f"Could not generate suggestion: {str(e)}"
+                })
+        
+        return jsonify(suggestions)
+        
+    except Exception as e:
+        app.logger.error(f"Error generating event suggestions: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 # Add alternative endpoint format for compatibility
 @app.route('/api/events/month/<int:year>/<string:month>', methods=['GET'])
@@ -812,6 +1007,38 @@ def get_current_user():
         'id': current_user.id,
         'username': current_user.username
     })
+
+@app.route('/api/events/all', methods=['GET'])
+@login_required
+def get_all_events():
+    """Get all events from all users for the analytics feature"""
+    try:
+        # Query all events from the database, including user information
+        events_query = db.session.query(
+            Event, 
+            User.id.label('user_id'),
+            User.username.label('username')
+        ).join(
+            User, User.id == Event.user_id
+        ).all()
+        
+        events_list = []
+        for event_data in events_query:
+            event, user_id, username = event_data
+            events_list.append({
+                'id': event.id,
+                'title': event.title,
+                'start': event.start.isoformat(),
+                'end': event.end.isoformat(),
+                'location': event.location,
+                'user_id': user_id,
+                'username': username
+            })
+        
+        return jsonify(events_list)
+    except Exception as e:
+        app.logger.error(f"Error retrieving all events: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @socketio.on('connect')
 @login_required

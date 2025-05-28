@@ -76,6 +76,14 @@
                     <div id="notification-menu" class="notification-menu">
                         <div class="notification-menu-header">
                             <span>Notifications</span>
+                            <div class="notification-actions">
+                                <button id="check-events-btn" class="notification-action-btn" title="Check Matching Events">
+                                    <i class="fas fa-calendar-check"></i>
+                                </button>
+                                <button id="notification-settings" class="notification-action-btn" title="Notification Settings">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
                         </div>
                         <ul id="notification-list" class="notification-list">
                             <!-- Notifications will be rendered here -->
@@ -193,6 +201,46 @@
         </form>
     </div>
 </div>
+
+<!-- Notification Preferences Modal -->
+<div class="modal" id="notification-preferences-modal">
+    <div class="modal-content">
+        <h3>Notification Preferences</h3>
+        <form id="notification-preferences-form">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="enable-all-notifications" checked>
+                    Enable all notifications
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="enable-sound-notifications" checked>
+                    Enable sound when receiving notifications
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="enable-system-notifications">
+                    Enable browser notifications
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="notification-display-time">Display notifications for:</label>
+                <select id="notification-display-time">
+                    <option value="5">5 seconds</option>
+                    <option value="10" selected>10 seconds</option>
+                    <option value="30">30 seconds</option>
+                    <option value="60">1 minute</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancel-notification-preferences-btn">Cancel</button>
+                <button type="submit" class="primary-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -203,9 +251,12 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <!-- Add current user ID for JavaScript - ensure it's always set -->
+<!-- Pass user ID via data attribute to avoid JS syntax issues -->
+<div id="user-data" data-user-id="{{ current_user.id|default('null') }}" style="display:none;"></div>
 <script>
     // Set current user ID for event management
-    const currentUserId = {{ current_user.id|default('null') }};
+    const userDataDiv = document.getElementById('user-data');
+    const currentUserId = userDataDiv ? userDataDiv.getAttribute('data-user-id') : null;
     console.log('Current user ID from template:', currentUserId);
 </script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
