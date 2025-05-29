@@ -5,4 +5,5 @@
 5) ✓ Rimuovere la lettura del markdown di kokoro
 6) ✓ Implementare il calendario nella sidebar laterale
 7) ✓ Salvataggio eventi calendario nel database e condivisione tra utenti
+8) ✓ Aggiunta pulsanti modifica ed eliminazione per gli eventi dell'utente
 

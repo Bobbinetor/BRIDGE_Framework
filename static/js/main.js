@@ -658,7 +658,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => {
                 if (!response.ok) {
                     return response.json().then(errData => {
-                        throw new Error(`Server error: ${errData.error || response.statusText}`);
+                        // Special handling for permission errors
+                        if (response.status === 403) {
+                            throw new Error('Permission denied: you can only manage your own events.');
+                        } else {
+                            throw new Error(`Server error: ${errData.error || response.statusText}`);
+                        }
                     });
                 }
                 return response.json();
@@ -878,10 +883,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 `<span class="event-location"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(evt.location)}</span>` : '';
             
             // Include username to show who created the event
-            const usernameDisplay = `<span class="event-creator"><i class="fas fa-user"></i> ${escapeHtml(evt.username)}</span>`;
+            // Add "created by" text for clarity, and make it more visible if it's the current user's event
+            const isOwnEvent = currentUserId && evt.user_id && currentUserId.toString() === evt.user_id.toString();
+            const usernameDisplay = `<span class="event-creator${isOwnEvent ? ' own-event' : ''}">
+                <i class="fas fa-user"></i> ${isOwnEvent ? '<strong>You</strong>' : 'Created by'}: ${escapeHtml(evt.username)}
+            </span>`;
             
             // Only show action buttons if we know the current user and they own the event
-            const showButtons = currentUserId && evt.user_id === currentUserId;
+            // Ensure proper string comparison by converting both to strings first
+            const eventUserId = evt.user_id ? evt.user_id.toString() : null;
+            const currentUserIdStr = currentUserId ? currentUserId.toString() : null;
+            // Debug info for easier troubleshooting
+            console.log(`Event ${evt.id} - User ID: ${eventUserId}, Current user ID: ${currentUserIdStr}, Match: ${eventUserId === currentUserIdStr}`);
+            const showButtons = currentUserIdStr && eventUserId && eventUserId === currentUserIdStr;
             
             li.innerHTML = `
                 <div class="event-details">
@@ -966,7 +980,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error('Network response was not ok');
+                            return response.json().then(errData => {
+                                // Special handling for permission errors
+                                if (response.status === 403) {
+                                    throw new Error('Permission denied: you can only delete your own events.');
+                                } else {
+                                    throw new Error(`Server error: ${errData.error || response.statusText}`);
+                                }
+                            });
                         }
                         return response.json();
                     })
