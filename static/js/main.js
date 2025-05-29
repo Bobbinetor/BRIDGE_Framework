@@ -2171,6 +2171,31 @@ document.addEventListener('DOMContentLoaded', function() {
                             "${llmSuggestion}"
                         </div>
                         <div class="llm-suggestion-details">
+                            <div class="conversation-starters-section">
+                                <h4>User Interests</h4>
+                                <ul class="interests-list">`;
+                    
+                    // Add user interests information
+                    const userInterests = suggestion.user_interests || {};
+                    let hasInterests = false;
+                    
+                    for (const [username, interests] of Object.entries(userInterests)) {
+                        if (interests && interests.length > 0) {
+                            hasInterests = true;
+                            message += `<li>
+                                <strong>${username}</strong>: 
+                                <span class="user-interests">${interests.join(', ')}</span>
+                            </li>`;
+                        }
+                    }
+                    
+                    // If no interests found, provide a message
+                    if (!hasInterests) {
+                        message += `<li><em>No specific interests provided by users</em></li>`;
+                    }
+                    
+                    message += `</ul>
+                            </div>
                             <div class="contact-info-section">
                                 <h4>Contact Information</h4>
                                 <ul class="contact-list">`;

@@ -1582,12 +1582,34 @@ button:disabled {
     font-size: 0.9em;
 }
 
-.contact-info-section {
+.contact-info-section,
+.conversation-starters-section {
     margin-top: 12px;
     padding: 8px;
     background-color: rgba(52, 152, 219, 0.05);
     border-radius: 4px;
     border-left: 2px solid var(--primary-color, #3498db);
+}
+
+/* Styling for user interests */
+.interests-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 5px 0;
+}
+
+.interests-list li {
+    padding: 4px 0;
+    border-bottom: 1px dashed rgba(52, 152, 219, 0.2);
+}
+
+.interests-list li:last-child {
+    border-bottom: none;
+}
+
+.user-interests {
+    color: #2980b9;
+    font-style: italic;
 }
 
 .contact-info-section h4 {

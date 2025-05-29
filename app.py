@@ -907,12 +907,16 @@ def get_event_match_suggestions():
             # Add matching events to the result
             for event in matching_events:
                 user = db.session.get(User, event.user_id)
+                # Get user interests if available
+                user_interests = user.interests.split(',') if user and user.interests else []
                 matches_by_key[(event_date, location)].append({
                     'title': event.title,
                     'username': user.username if user else 'Unknown User',
                     'email': user.email if user else '',
                     'start_time': event.start.strftime('%H:%M'),
-                    'end_time': event.end.strftime('%H:%M')
+                    'end_time': event.end.strftime('%H:%M'),
+                    'interests': user_interests,
+                    'user_id': user.id if user else None
                 })
         
         # Generate suggestions using LLM for each group of matching events
@@ -930,6 +934,18 @@ def get_event_match_suggestions():
                 matches_text += f"- {match['username']} has event '{match['title']}' from {match['start_time']} to {match['end_time']}\n"
                 users_involved.add(match['username'])
             
+            # Collect interests data for users
+            interests_by_user = {}
+            for match in matches:
+                if match.get('interests') and match.get('username'):
+                    interests_by_user[match['username']] = match['interests']
+            
+            # Create interest text block for the prompt
+            interests_text = ""
+            for username, interests in interests_by_user.items():
+                if interests:
+                    interests_text += f"\n{username}'s interests: {', '.join(interests)}"
+            
             # Create prompt for LLM
             prompt = f"""You are an assistant helping to coordinate meetings between users who have events in the same location on the same day.
             
@@ -939,9 +955,15 @@ Current user ({current_user.username}) has the following events in {location} on
 Other users have the following events in the same location and day:
 {matches_text}
 
-Based on this information, create a friendly, brief suggestion for {current_user.username} about potentially coordinating or meeting with {', '.join(users_involved)}. 
-Include a specific suggestion about when and where they might meet considering their schedules.
-Keep the suggestion concise (maximum 3-4 sentences) and focus on the social opportunity.
+User interests information:{interests_text}
+
+Based on this information:
+1. Create a friendly, brief suggestion for {current_user.username} about potentially coordinating or meeting with {', '.join(users_involved)}
+2. Include a specific suggestion about when and where they might meet considering their schedules
+3. Provide 1-2 conversation starter ideas based on the other users' interests
+4. If there are common interests between users, highlight them as potential conversation topics
+
+Keep the suggestion concise and focus on the social opportunity and common interests.
 """
             
             # Call Ollama API
@@ -961,6 +983,12 @@ Keep the suggestion concise (maximum 3-4 sentences) and focus on the social oppo
                     # Clean up the text (remove any excess newlines/formatting)
                     suggestion_text = suggestion_text.strip()
                     
+                    # Extract interests for the frontend
+                    interests_data = {}
+                    for match in matches:
+                        if match.get('username') and match.get('interests'):
+                            interests_data[match['username']] = match['interests']
+                    
                     suggestions.append({
                         'date': event_date,
                         'formatted_date': formatted_date,
@@ -968,7 +996,8 @@ Keep the suggestion concise (maximum 3-4 sentences) and focus on the social oppo
                         'user_events': user_events_by_key.get((event_date, location), []),
                         'matching_events': matches,
                         'users_involved': list(users_involved),
-                        'suggestion': suggestion_text
+                        'suggestion': suggestion_text,
+                        'user_interests': interests_data
                     })
                 else:
                     app.logger.error(f"Ollama API error: {response.text}")
