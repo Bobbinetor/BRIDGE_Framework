@@ -694,6 +694,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (selectedDate === eventDateStr) {
                     loadEventsForDate(selectedDate);
                 }
+                
+                // Generate new meeting suggestions after adding/updating an event
+                setTimeout(checkMatchingEvents, 500);
             })
             .catch(error => {
                 console.error(`Error ${isUpdate ? 'updating' : 'creating'} event:`, error);
@@ -1439,6 +1442,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Inizializza il calendario
         setTimeout(initCalendar, 500);
+        
+        // Generate automatic meeting suggestions when page loads
+        setTimeout(checkMatchingEvents, 1000);
 
         // Set up appointment modal event listeners
         if (appointmentForm) {
@@ -1910,6 +1916,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Inizializza il calendario
         setTimeout(initCalendar, 500);
+        
+        // Generate automatic meeting suggestions when page loads
+        setTimeout(checkMatchingEvents, 1000);
 
         // Set up appointment modal event listeners
         if (appointmentForm) {
@@ -2430,15 +2439,7 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('click', closeMobileSidebar);
         });
         
-        // Add event listener for check events button
-        const checkEventsBtn = document.getElementById('check-events-btn');
-        if (checkEventsBtn) {
-            checkEventsBtn.addEventListener('click', function(e) {
-                e.stopPropagation(); // Prevent menu from closing
-                checkMatchingEvents();
-            });
-        }
-        
+        // Remove click listener for check events button since we'll generate suggestions automatically
         // Notification preferences modal event listeners
         const notificationPreferencesForm = document.getElementById('notification-preferences-form');
         const cancelNotificationPreferencesBtn = document.getElementById('cancel-notification-preferences-btn');
