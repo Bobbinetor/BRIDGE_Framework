@@ -2362,14 +2362,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Enhanced sidebar toggle for desktop
+        // Enhanced sidebar toggle for both desktop and mobile
         toggleSidebarBtn.addEventListener('click', function(e) {
-            // Ensure this only runs on desktop
+            e.preventDefault();
+            e.stopPropagation();
+            
             if (window.innerWidth > 768) {
+                // Desktop behavior
                 console.log('Desktop sidebar toggle');
-                e.preventDefault();
-                e.stopPropagation();
-                
                 sidebar.classList.toggle('sidebar-collapsed');
                 
                 const icon = toggleSidebarBtn.querySelector('i');
@@ -2380,9 +2380,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon.classList.remove('fa-expand');
                     icon.classList.add('fa-bars');
                 }
-                
-                return false;
+            } else {
+                // Mobile behavior
+                console.log('Mobile sidebar toggle');
+                toggleMobileSidebar();
             }
+            
+            return false;
         });
 
         // Close sidebar when clicking outside on mobile
@@ -2432,7 +2436,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Mobile sidebar toggle
         mobileMenuToggle.addEventListener('click', toggleMobileSidebar);
-        sidebarOverlay.addEventListener('click', toggleMobileSidebar);
+        sidebarOverlay.addEventListener('click', closeMobileSidebar);
 
         // Also close mobile sidebar when selecting a chat
         document.querySelectorAll('.chat-item').forEach(item => {
@@ -3045,9 +3049,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset desktop-specific classes when in mobile mode
             sidebar.classList.remove('sidebar-collapsed');
             
-            // Assicuriamoci che la sidebar sia chiusa all'inizio su mobile
-            sidebar.style.left = '-280px';  // Imposta direttamente lo stile
-            
             // Hint visibile per l'utente
             const hasSeenMobileHint = localStorage.getItem('hasSeenMobileHint');
             if (!hasSeenMobileHint) {
@@ -3112,28 +3113,24 @@ document.addEventListener('DOMContentLoaded', function() {
             // Aprire la sidebar
             console.log('Opening sidebar');
             sidebar.classList.add('active');
-            sidebar.style.left = '0'; // Imposta direttamente lo stile
             sidebarOverlay.classList.add('active');
             document.body.classList.add('sidebar-open');
             
-            // Cambia l'icona
-            const icon = mobileMenuToggle.querySelector('i');
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
+            // Cambia l'icona sia per il toggle principale che per il mobile menu
+            const mobileIcon = mobileMenuToggle.querySelector('i');
+            if (mobileIcon) {
+                mobileIcon.classList.remove('fa-bars');
+                mobileIcon.classList.add('fa-times');
+            }
+            
+            const toggleIcon = toggleSidebarBtn.querySelector('i');
+            if (toggleIcon) {
+                toggleIcon.classList.remove('fa-bars');
+                toggleIcon.classList.add('fa-times');
+            }
         } else {
             // Chiudere la sidebar
-            console.log('Closing sidebar');
-            sidebar.classList.remove('active');
-            sidebar.style.left = '-280px'; // Imposta direttamente lo stile
-            sidebarOverlay.classList.remove('active');
-            document.body.classList.remove('sidebar-open');
-            
-            // Cambia l'icona
-            const icon = mobileMenuToggle.querySelector('i');
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-            
-            closeSidebarCalendarDropdown();
+            closeMobileSidebar();
         }
     }
     
@@ -3141,13 +3138,26 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeMobileSidebar() {
         console.log('closeMobileSidebar called');
         sidebar.classList.remove('active');
-        sidebar.style.left = '-280px'; // Imposta direttamente lo stile
         sidebarOverlay.classList.remove('active');
         document.body.classList.remove('sidebar-open');
         
-        const icon = mobileMenuToggle.querySelector('i');
-        icon.classList.remove('fa-times');
-        icon.classList.add('fa-bars');
+        // Reset the icon state for mobile menu toggle
+        const mobileIcon = mobileMenuToggle.querySelector('i');
+        if (mobileIcon) {
+            mobileIcon.classList.remove('fa-times');
+            mobileIcon.classList.add('fa-bars');
+        }
+        
+        // Reset the icon state for sidebar toggle button
+        const toggleIcon = toggleSidebarBtn.querySelector('i');
+        if (toggleIcon) {
+            toggleIcon.classList.remove('fa-times');
+            if (window.innerWidth > 768) {
+                toggleIcon.classList.add(sidebar.classList.contains('sidebar-collapsed') ? 'fa-expand' : 'fa-bars');
+            } else {
+                toggleIcon.classList.add('fa-bars');
+            }
+        }
         
         closeSidebarCalendarDropdown();
     }

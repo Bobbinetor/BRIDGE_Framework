@@ -317,37 +317,6 @@
             appointmentEnd.classList.add("flatpickr-input");
             flatpickr("#appointment-end", dateConfig);
         }
-        
-        // Debug script to help diagnose issues with the mobile sidebar
-        console.log('DOM fully loaded');
-        const mobileBtn = document.getElementById('mobile-menu-toggle');
-        const sidebar = document.querySelector('.sidebar');
-        
-        // Adds a direct backup event listener
-        if (mobileBtn && sidebar) {
-            console.log('Mobile button found, adding backup handler');
-            mobileBtn.addEventListener('click', function(e) {
-                console.log('Direct click handler triggered');
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Direct style manipulation as a backup
-                if (sidebar.style.left === '0px') {
-                    sidebar.style.left = '-280px';
-                    document.body.style.overflow = '';
-                } else {
-                    sidebar.style.left = '0';
-                    document.body.style.overflow = 'hidden';
-                }
-                
-                return false;
-            });
-        }
-        
-        // Test the media query from JavaScript
-        const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        console.log('Media query says is mobile:', isMobile);
-        console.log('Current window width:', window.innerWidth);
     });
 </script>
 {% endblock %}
