@@ -1370,6 +1370,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize app
     function init() {
+        // Check for markdown libraries
+        checkMarkdownLibraries();
+        
         // Set the language selector to the default value or saved preference
         const savedLanguage = localStorage.getItem('preferredLanguage');
         if (savedLanguage) {
@@ -1677,25 +1680,117 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to add a new notification
-    function addNotification(text, type = 'default') {
+    function addNotification(text, type = 'default', options = {}) {
         const newNotification = {
             text: text,
             type: type,
             read: false,
             timestamp: new Date().toISOString(),
-            isHTML: text.includes('<') && text.includes('>') // Check if the text contains HTML tags
+            isHTML: options.isHTML || false, // Explicit HTML flag
+            isMarkdown: options.isMarkdown === undefined ? true : options.isMarkdown // Tratta come markdown per default, a meno che non sia esplicitamente disabilitato
         };
         
         notifications.unshift(newNotification); // Add to beginning of array
         renderNotifications();
         
-        // Show system notification if enabled (strip HTML for system notifications)
-        const plainText = text.replace(/<[^>]*>?/gm, '');
+        // Show system notification if enabled (strip HTML/markdown for system notifications)
+        const plainText = text.replace(/<[^>]*>?/gm, '').replace(/[*_~`#]/g, '');
         showSystemNotification(plainText);
         
         return newNotification;
     }
 
+    // Initialize markdown-it renderer
+    let md;
+    let markdownInitialized = false;
+    let markdownInitAttempts = 0;
+    const maxMarkdownInitAttempts = 5;
+    
+    function getMarkdownRenderer() {
+        if (!md && window.markdownit) {
+            try {
+                // Configurazione ottimizzata per le notifiche
+                md = window.markdownit({
+                    html: false,        // Disabilita HTML nei contenuti per sicurezza
+                    xhtmlOut: false,    // Non usare tag XHTML
+                    breaks: true,       // Converti '\n' in <br>
+                    linkify: true,      // Converti automaticamente URL in link
+                    typographer: true,  // Abilita miglioramenti tipografici
+                });
+                
+                markdownInitialized = true;
+                console.log('Markdown renderer initialized successfully');
+            } catch (e) {
+                console.error('Error initializing markdown renderer:', e);
+            }
+        }
+        return md;
+    }
+    
+    function renderMarkdown(text) {
+        try {
+            // If libraries aren't loaded yet, attempt to initialize
+            if (!window.markdownit || !window.DOMPurify) {
+                if (markdownInitAttempts < maxMarkdownInitAttempts) {
+                    console.warn('Markdown-it or DOMPurify library not loaded yet, retry attempt:', markdownInitAttempts + 1);
+                    markdownInitAttempts++;
+                    
+                    // Attempt to retry after a short delay
+                    setTimeout(() => {
+                        if (window.markdownit && window.DOMPurify) {
+                            console.log('Libraries are now available, re-rendering notifications');
+                            renderNotifications(); // Re-render all notifications
+                        }
+                    }, 500);
+                }
+                return text;
+            }
+            
+            // Skip processing if text is empty or not a string
+            if (!text || typeof text !== 'string') {
+                return text || '';
+            }
+            
+            // Preprocess asterisks for proper bold/italic formatting
+            let preprocessedText = text;
+            
+            // Fix common markdown issues in LLM output
+            
+            // 1. Convert standalone asterisks (common in LLM output) to proper markdown syntax
+            preprocessedText = preprocessedText.replace(/\*([^\s\*][^\*]*[^\s\*])\*/g, '**$1**');
+            
+            // 2. Handle special case where markdown may be encoded in HTML entities
+            preprocessedText = preprocessedText.replace(/&quot;/g, '"')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>');
+                
+            // 3. Fix incorrect formatting from LLMs
+            preprocessedText = preprocessedText.replace(/\*\*\*([^*]+)\*\*\*/g, '***$1***');
+                
+            const md = getMarkdownRenderer();
+            if (!md) {
+                console.warn('Could not initialize markdown renderer');
+                return text;
+            }
+            
+            console.log('Preprocessed text:', preprocessedText);
+            
+            // Process the markdown with our preprocessing
+            const renderedHtml = md.render(preprocessedText);
+            
+            console.log('Rendered HTML before sanitization:', renderedHtml);
+            
+            // Sanitize the HTML to prevent XSS attacks and return the sanitized HTML
+            const sanitizedHtml = window.DOMPurify.sanitize(renderedHtml);
+            
+            return sanitizedHtml;
+        } catch (err) {
+            console.error('Error rendering markdown:', err, text);
+            return text;
+        }
+    }
+    
     function renderNotifications() {
         notificationList.innerHTML = '';
         if (!notifications.length) {
@@ -1706,12 +1801,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 const li = document.createElement('li');
                 li.className = `notification-item notification-${notif.type}`;
                 
-                // Handle HTML content if needed
-                if (notif.isHTML) {
-                    li.innerHTML = notif.text;
+                // Create a container for the notification content
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'notification-content';
+                
+                // Log per debug per vedere cosa sta arrivando
+                console.log("Processing notification:", notif.text, "isHTML:", notif.isHTML, "isMarkdown:", notif.isMarkdown);
+                
+                // Prima estrai eventuali contenuti markdown dalla risposta dell'LLM
+                let processedText = notif.text;
+                
+                // Cerca di identificare contenuti markdown all'interno dell'HTML se entrambe le opzioni sono attive
+                if (notif.isHTML && notif.isMarkdown) {
+                    // Cerca contenuti testuali che potrebbero contenere markdown nella llm-suggestion-content
+                    const llmContentMatch = processedText.match(/<div class="llm-suggestion-content">([\s\S]*?)<\/div>/i);
+                    if (llmContentMatch && llmContentMatch[1]) {
+                        // Estrai il contenuto, rimuovendo gli apici e ripulendo
+                        let markdownContent = llmContentMatch[1].replace(/^"/, '').replace(/"$/, '').trim();
+                        
+                        // Processa il markdown se presente
+                        if (markdownContent) {
+                            // Converti il markdown in HTML
+                            const renderedContent = renderMarkdown(markdownContent);
+                            // Sostituisci il contenuto originale con quello renderizzato
+                            processedText = processedText.replace(
+                                /<div class="llm-suggestion-content">([\s\S]*?)<\/div>/i, 
+                                `<div class="llm-suggestion-content">${renderedContent}</div>`
+                            );
+                        }
+                    }
+                    // Sanitizza l'HTML finale
+                    contentDiv.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(processedText) : processedText;
+                } else if (notif.isHTML) {
+                    // HTML puro senza markdown (genera direttamente)
+                    contentDiv.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(processedText) : processedText;
+                } else if (notif.isMarkdown !== false) {
+                    // Solo markdown (genera HTML tramite markdown-it)
+                    let renderedMarkdown = renderMarkdown(processedText);
+                    contentDiv.innerHTML = renderedMarkdown;
                 } else {
-                    li.textContent = notif.text;
+                    // Solo testo puro (senza HTML o markdown)
+                    contentDiv.textContent = processedText;
                 }
+                
+                // Add the content div to the notification item
+                li.appendChild(contentDiv);
                 
                 // Add timestamp if available
                 if (notif.timestamp) {
@@ -1841,9 +1975,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Existing code continues ---
+    // Check if markdown libraries are loaded and re-render notifications if needed
+    function checkMarkdownLibraries() {
+        if (window.markdownit && window.DOMPurify && !markdownInitialized) {
+            console.log('Markdown libraries loaded, initializing renderer');
+            getMarkdownRenderer();
+            renderNotifications();
+            return true;
+        } else if (!markdownInitialized) {
+            console.log('Waiting for markdown libraries to load...');
+            setTimeout(checkMarkdownLibraries, 1000);
+            return false;
+        }
+        return markdownInitialized;
+    }
+    
     // Initialize app
     function init() {
+        // Check for markdown libraries
+        checkMarkdownLibraries();
+        
         // Set the language selector to the default value or saved preference
         const savedLanguage = localStorage.getItem('preferredLanguage');
         if (savedLanguage) {
@@ -2171,18 +2322,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const llmSuggestion = suggestion.suggestion;
                     
                     // Create a detailed message with the LLM suggestion prominently displayed
-                    let message = `<div class="llm-suggestion">
-                        <div class="llm-suggestion-header">
-                            <i class="fas fa-lightbulb suggestion-icon"></i>
-                            <strong>Meetup Opportunity in ${location} on ${formattedDate}</strong>
-                        </div>
-                        <div class="llm-suggestion-content">
-                            "${llmSuggestion}"
-                        </div>
-                        <div class="llm-suggestion-details">
-                            <div class="conversation-starters-section">
-                                <h4>User Interests</h4>
-                                <ul class="interests-list">`;
+                    let message = `<div class=\"llm-suggestion\">\n        <div class=\"llm-suggestion-header\">\n            <i class=\"fas fa-lightbulb suggestion-icon\"></i>\n            <strong>Meetup Opportunity in ${location} on ${formattedDate}</strong>\n        </div>\n        <div class=\"llm-suggestion-content\">\n            \"${llmSuggestion}\"\n        </div>\n        <div class=\"llm-suggestion-details\">\n            <div class=\"conversation-starters-section\">\n                <h4>User Interests</h4>\n                <ul class=\"interests-list">`;
                     
                     // Add user interests information
                     const userInterests = suggestion.user_interests || {};
@@ -2203,11 +2343,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         message += `<li><em>No specific interests provided by users</em></li>`;
                     }
                     
-                    message += `</ul>
-                            </div>
-                            <div class="contact-info-section">
-                                <h4>Contact Information</h4>
-                                <ul class="contact-list">`;
+                    message += `</ul>\n            </div>\n            <div class=\"contact-info-section\">\n                <h4>Contact Information</h4>\n                <ul class=\"contact-list">`;
                     
                     // Add matching events with user emails
                     const uniqueUsers = {};
@@ -2218,15 +2354,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                     
-                    message += `</ul>
-                            </div>
-                            <div class="event-mini-summary">
-                                <p><i class="fas fa-calendar"></i> You have <strong>${userEvents.length}</strong> event(s) and <strong>${matchingEvents.length}</strong> matching event(s) in ${location}.</p>
-                            </div>
-                        </div>
-                    </div>`;
+                    message += `</ul>\n            </div>\n            <div class=\"event-mini-summary\">\n                <p><i class=\"fas fa-calendar\"></i> You have <strong>${userEvents.length}</strong> event(s) and <strong>${matchingEvents.length}</strong> matching event(s) in ${location}.</p>\n            </div>\n        </div>\n    </div>`;
                     
-                    const notif = addNotification(message, 'llm-suggestion');
+                    // Passa isHTML: true e isMarkdown: true per notifiche LLM (per processare il markdown all'interno dell'HTML)
+                    const notif = addNotification(message, 'llm-suggestion', { isHTML: true, isMarkdown: true });
                 });
                 
                 // Add event listeners for toggles after notifications are rendered
@@ -2414,33 +2545,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 icon.classList.remove('fa-times');
                 icon.classList.add('fa-bars');
             }
-        });
-        
-        // Add stop audio playback button functionality
-        let stopAudioBtn = document.createElement('button');
-        stopAudioBtn.id = 'stop-audio-btn';
-        stopAudioBtn.className = 'action-btn';
-        stopAudioBtn.title = 'Stop Audio';
-        stopAudioBtn.innerHTML = '<i class="fas fa-stop"></i>';
-        stopAudioBtn.style.display = 'none';
-        stopAudioBtn.addEventListener('click', function() {
-            if (audioSource) {
-                try {
-                    if (audioSource.stop) audioSource.stop();
-                } catch (e) { }
-                audioSource = null;
-                stopAudioBtn.style.display = 'none';
-            }
-        });
-        document.querySelector('#message-form').appendChild(stopAudioBtn);
-
-        // Mobile sidebar toggle
-        mobileMenuToggle.addEventListener('click', toggleMobileSidebar);
-        sidebarOverlay.addEventListener('click', closeMobileSidebar);
-
-        // Also close mobile sidebar when selecting a chat
-        document.querySelectorAll('.chat-item').forEach(item => {
-            item.addEventListener('click', closeMobileSidebar);
         });
         
         // Remove click listener for check events button since we'll generate suggestions automatically
