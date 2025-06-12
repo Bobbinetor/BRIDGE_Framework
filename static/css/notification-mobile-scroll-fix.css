@@ -1,0 +1,62 @@
+/**
+ * Fix specifico per lo scrolling delle notifiche su dispositivi mobili
+ * Questo file assicura che il menu delle notifiche sia scrollabile su dispositivi touch
+ */
+
+@media (max-width: 768px) {
+    /* Dimensioni e posizionamento ottimizzati */
+    .notification-menu {
+        position: fixed !important;
+        top: 60px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: calc(100% - 20px) !important;
+        max-height: 70vh !important; /* Limita l'altezza per mantenere visibilità della pagina */
+        overflow-y: auto !important; /* Forza lo scrolling verticale */
+        -webkit-overflow-scrolling: touch !important; /* Scrolling fluido su iOS */
+        margin: 0 auto !important;
+        padding-bottom: 15px !important; /* Spazio extra in fondo */
+        touch-action: pan-y !important; /* Ottimizza per touch vertical scrolling */
+        transform: translateZ(0) !important; /* Hardware acceleration */
+    }
+
+    /* Forza l'overflow-y visible per la lista delle notifiche */
+    .notification-list {
+        overflow-y: visible !important; /* Necessario per funzionamento corretto con il contenitore scrollabile */
+        max-height: none !important; /* Rimuovi limitazioni di altezza */
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* Assicura che l'header rimanga visibile durante lo scroll */
+    .notification-menu-header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 10 !important;
+        background-color: white !important;
+        padding: 12px 15px !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Migliora la touch-area degli elementi cliccabili */
+    .notification-item {
+        padding: 15px !important;
+        min-height: 50px !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    /* Impedisci overlap del contenuto con l'header */
+    .notification-list {
+        padding-top: 2px !important;
+    }
+    
+    /* Fix per Safari mobile che ha problemi con overflow-scrolling */
+    .notification-menu:before,
+    .notification-menu:after {
+        content: "" !important;
+        height: 1px !important;
+        display: block !important;
+    }
+}

@@ -1,0 +1,217 @@
+/* 
+ * BRIDGE Framework - Responsive Enhancements
+ * Questo file contiene miglioramenti responsivi per l'applicazione
+ */
+
+/* Regole generali per migliorare la responsività */
+html {
+    font-size: 16px;
+}
+
+/* Media query per tablet e dispositivi simili */
+@media (max-width: 992px) {
+    html {
+        font-size: 15px;
+    }
+    
+    .chat-container {
+        padding: 10px;
+    }
+    
+    .modal-content {
+        width: 90%;
+        max-width: 500px;
+    }
+    
+    .chat-header {
+        padding: 10px;
+    }
+    
+    .message-input-container {
+        padding: 10px;
+    }
+}
+
+/* Media query per dispositivi mobili */
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+    
+    .app-container {
+        display: block;
+        height: auto;
+        min-height: 100vh;
+    }
+    
+    .chat-container {
+        height: auto;
+        min-height: calc(100vh - 60px);
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .chat-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px;
+        height: auto;
+    }
+    
+    .header-actions {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .message-input-container {
+        padding: 10px;
+    }
+    
+    .messages-container {
+        max-height: calc(100vh - 180px);
+    }
+    
+    /* Stili modali per mobile */
+    .modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 10% auto;
+        padding: 15px;
+    }
+    
+    /* Migliorare form responsivi */
+    .auth-card {
+        width: 90%;
+        max-width: none;
+    }
+    
+    /* Dimensione minima per i pulsanti su mobile */
+    button, .btn, .action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Migliora visibilità testi */
+    .chat-message {
+        max-width: 85%;
+    }
+}
+
+/* Media query per dispositivi molto piccoli */
+@media (max-width: 480px) {
+    .chat-header {
+        gap: 10px;
+    }
+    
+    .header-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .message-input-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .message-input-wrapper {
+        flex: 1;
+        margin-bottom: 10px;
+    }
+    
+    .message-actions {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .message-input {
+        padding: 12px;
+    }
+    
+    .auth-container {
+        padding: 10px;
+    }
+}
+
+/* Fix specifici per la sidebar mobile */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: -280px; /* Nasconde la sidebar fuori dallo schermo */
+        top: 0;
+        height: 100%;
+        width: 280px;
+        z-index: 999;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+        background-color: var(--white-blue);
+    }
+    
+    .sidebar.active {
+        left: 0; /* Mostra la sidebar */
+    }
+    
+    .mobile-menu-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+    }
+}
+
+/* Miglioramenti per i form */
+@media (max-width: 768px) {
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    input, select, textarea {
+        font-size: 16px; /* Evita lo zoom automatico su iOS */
+        padding: 12px;
+    }
+    
+    .checkbox-group, .radio-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .checkbox-group label, .radio-group label {
+        margin-bottom: 10px;
+    }
+}
+
+/* Miglioramenti per le notifiche su dispositivi mobili */
+@media (max-width: 768px) {
+    .notification-bell-container {
+        position: relative;
+    }
+
+    .notification-menu {
+        position: fixed;
+        top: 60px; /* Spazio per l'header */
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: 95%;
+        max-height: 80vh; /* Altezza massima relativa alla viewport */
+        z-index: 1001;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* Miglior scrolling touch su iOS */
+    }
+    
+    .notification-menu-header {
+        position: sticky;
+        top: 0;
+        background-color: var(--sidebar-bg, white);
+        padding: 10px;
+        z-index: 2;
+    }
+    
+    .notification-item {
+        padding: 12px;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+}

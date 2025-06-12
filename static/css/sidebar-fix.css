@@ -1,0 +1,64 @@
+/**
+ * Correzioni per la sidebar su dispositivi mobili
+ * Questo file contiene correzioni specifiche per problemi di visualizzazione e interazione
+ * con la sidebar su dispositivi mobili
+ */
+
+/* Garantisce che tutti gli elementi della sidebar abbiano lo stesso sfondo */
+.sidebar,
+.sidebar-header,
+.user-info,
+.chat-list,
+.sidebar-calendar {
+    background-color: var(--deep-blue);
+}
+
+/* Fix per problemi di colorazione su alcuni browser */
+@media (max-width: 768px) {
+    .sidebar {
+        background-color: var(--deep-blue) !important;
+    }
+
+    /* Assicuriamo che tutti gli elementi nella sidebar abbiano lo stesso sfondo */
+    .sidebar > * {
+        background-color: var(--deep-blue);
+    }
+    
+    /* Miglioramenti per la visualizzazione della chat list */
+    .chat-list {
+        -webkit-overflow-scrolling: touch;
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: thin; /* Firefox */
+        background-color: var(--deep-blue);
+        padding-bottom: 8px !important;
+    }
+    
+    /* Fix per l'interazione con gli elementi nella chat list */
+    .chat-item {
+        position: relative;
+        z-index: 10;
+        touch-action: manipulation;
+    }
+
+    /* Migliora l'accessibilità dei pulsanti nella sidebar */
+    .sidebar button {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1); /* Feedback visivo più leggero */
+    }
+
+    /* Uniformare i margini interni per gli elementi della sidebar */
+    .user-info {
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Assicuriamoci che l'intera sidebar sia correttamente accessibile */
+    .sidebar.active {
+        z-index: 999;
+        left: 0;
+        height: 100%;
+        overscroll-behavior: contain;
+    }
+}

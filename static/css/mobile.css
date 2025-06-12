@@ -1,0 +1,194 @@
+/* Mobile-specific styles for Sea Chat */
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+    /* App container adjustments for mobile */
+    .app-container {
+        grid-template-columns: 1fr;
+        overflow: hidden;
+        display: block; /* Usa block invece di grid per migliore compatibilità mobile */
+    }
+    
+    /* Always show mobile menu toggle button on mobile */
+    .mobile-menu-toggle {
+        display: flex !important;
+    }
+
+    /* Sidebar positioning for mobile - default hidden */
+    .sidebar {
+        position: fixed;
+        left: -280px; /* Valore iniziale nascosto */
+        top: 0;
+        height: 100%;
+        width: 280px;
+        z-index: 999;
+        transition: left 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+        overflow-y: auto; /* Abilita lo scrolling nella sidebar */
+        overflow-x: hidden; /* Nascondi scrollbar orizzontale */
+        -webkit-overflow-scrolling: touch; /* Migliora lo scrolling touch su iOS */
+        background-color: var(--deep-blue);
+        display: flex;
+        flex-direction: column;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+        padding-bottom: 30px; /* Spazio in fondo per facilitare lo scroll */
+        will-change: left; /* Ottimizza la transizione */
+        backface-visibility: hidden; /* Previene flickering durante le animazioni */
+        transform: translateZ(0); /* Forza hardware acceleration */
+    }
+
+    /* Show sidebar when active */
+    .sidebar.active {
+        left: 0 !important; /* Override con important per forzare visibilità */
+        pointer-events: auto; /* Assicura che gli elementi siano interattivi */
+        visibility: visible; /* Garantisce che sia visibile */
+    }
+
+    /* Mobile menu toggle button */
+    .mobile-menu-toggle {
+        display: none; /* Hidden by default, shown via JS in mobile view */
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1000;
+        background-color: #0074d9;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease;
+    }
+    
+    .mobile-menu-toggle:hover {
+        background-color: #0063b8;
+    }
+
+    /* Sidebar overlay - darkens the background when sidebar is open */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+    }
+
+    /* Show overlay when sidebar is active */
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    /* Chat container adjustment */
+    .chat-container {
+        margin-left: 0;
+        width: 100%;
+        padding-top: 60px; /* Space for the mobile menu button */
+    }
+
+    /* Adjust calendar for mobile */
+    .sidebar-calendar {
+        width: 100%;
+        padding: 10px;
+    }
+
+    /* Adjust auth container for mobile */
+    .auth-container {
+        flex-direction: column;
+    }
+
+    .auth-card {
+        width: 90%;
+        max-width: none;
+        margin: 20px auto;
+    }
+    
+    /* Miglioramenti per il menu delle notifiche su mobile */
+    .notification-bell-container {
+        position: relative;
+    }
+    
+    .notification-menu {
+        position: fixed;
+        top: 60px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: 95%;
+        max-height: 80vh;
+        margin: 0 auto;
+        border-radius: 8px;
+        z-index: 1050;
+        display: none; /* Nascosto di default, mostrato via JS */
+        background-color: #fff; /* Assicuriamoci che abbia uno sfondo */
+        transform-origin: top right;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        overflow: hidden;
+    }
+    
+    /* Mostra menu quando è attivo */
+    .notification-menu.active {
+        display: block !important;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    
+    .notification-menu.mobile-view {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        left: 5px;
+        right: 5px;
+        max-width: calc(100% - 10px);
+        width: calc(100% - 10px);
+    }
+    
+    .notification-list {
+        max-height: 65vh;
+        overflow-y: auto;
+        padding: 0;
+        margin: 0;
+    }
+    
+    /* Overlay per il menu delle notifiche su mobile */
+    #notification-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.3);
+        z-index: 1040;
+    }
+}
+
+/* Better touch area for buttons on mobile */
+@media (max-width: 768px) {
+    button, 
+    .auth-button,
+    .chat-item {
+        padding: 12px;
+        min-height: 44px; /* Minimum touch target size */
+    }
+    
+    /* Adjust input fields for better mobile interaction */
+    input, 
+    select, 
+    textarea {
+        font-size: 16px; /* Prevent iOS zoom on focus */
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+    
+    /* Form adjustments */
+    .form-group {
+        margin-bottom: 20px;
+    }
+}

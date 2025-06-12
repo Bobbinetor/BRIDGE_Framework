@@ -1,0 +1,49 @@
+/**
+ * Stili per il pulsante di chiusura delle notifiche
+ */
+
+/* Stile generale per il pulsante */
+#notification-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background-color: transparent;
+    color: #666;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#notification-close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+#notification-close-btn:active {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: scale(0.95);
+}
+
+/* Stile specifico per mobile */
+@media (max-width: 768px) {
+    #notification-close-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+        color: #333;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Rendi il pulsante più visibile su mobile */
+    #notification-close-btn i {
+        font-size: 16px;
+    }
+}
+
+/* Rendilo più visibile quando il menu è aperto */
+.notification-menu.active #notification-close-btn {
+    display: flex !important;
+}

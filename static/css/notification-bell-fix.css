@@ -1,0 +1,63 @@
+/**
+ * This file fixes specific issues with the notification bell on mobile devices.
+ * It ensures proper display, clickability, and icon visibility.
+ */
+
+/* Fix the notification bell icon display */
+#notification-bell i.fas.fa-bell {
+    display: inline-block !important;
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Ensure the notification bell button is properly clickable */
+#notification-bell {
+    position: relative;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 8px;
+    color: var(--text-color, #333);
+}
+
+/* Make sure notification icon is accessible on mobile */
+@media (max-width: 768px) {
+    .notification-bell-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    #notification-bell {
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 101;
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 6px;
+        margin: 0 4px;
+    }
+    
+    /* Increase touch target and visual feedback */
+    #notification-bell:active {
+        background-color: rgba(0, 0, 0, 0.1);
+        transform: scale(0.95);
+    }
+    
+    /* Make sure the bell icon is visible inside the button */
+    #notification-bell i {
+        display: inline-block !important;
+        font-size: 18px;
+    }
+    
+    /* Fix notification badge position */
+    #notification-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+    }
+}

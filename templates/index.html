@@ -2,13 +2,16 @@
 
 {% block content %}
 <div class="app-container">
-    <!-- Mobile sidebar toggle button - always visible on small screens -->
-    <button id="mobile-menu-toggle" class="mobile-menu-toggle" style="display: none;">
+    <!-- Mobile sidebar toggle button - controlled by CSS media queries -->
+    <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle Menu" title="Open Menu">
         <i class="fas fa-bars"></i>
     </button>
     
     <!-- Sidebar overlay for mobile -->
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    
+    <!-- Notification overlay for mobile -->
+    <div id="notification-overlay" class="notification-overlay"></div>
     
     <!-- Sidebar for chat navigation -->
     <div class="sidebar">
@@ -73,7 +76,7 @@
                         <i class="fas fa-bell"></i>
                         <span id="notification-badge" style="display:none;"></span>
                     </button>
-                    <div id="notification-menu" class="notification-menu">
+                    <div id="notification-menu" class="notification-menu" style="display:none;">
                         <div class="notification-menu-header">
                             <span>Notifications</span>
                             <div class="notification-actions">
@@ -83,11 +86,18 @@
                                 <button id="notification-settings" class="notification-action-btn" title="Notification Settings">
                                     <i class="fas fa-cog"></i>
                                 </button>
+                                <!-- Aggiungi pulsante close esplicito per mobile -->
+                                <button id="notification-close-btn" class="notification-action-btn" title="Close Notifications">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
                         </div>
-                        <ul id="notification-list" class="notification-list">
-                            <!-- Notifications will be rendered here -->
-                        </ul>
+                        <!-- Container scrollabile migliorato per dispositivi mobile -->
+                        <div class="notification-scrollable-container">
+                            <ul id="notification-list" class="notification-list">
+                                <!-- Notifications will be rendered here -->
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <button id="rename-chat-btn" class="action-btn" title="Rename Chat" disabled>
@@ -316,32 +326,6 @@
             appointmentEnd.type = "text";
             appointmentEnd.classList.add("flatpickr-input");
             flatpickr("#appointment-end", dateConfig);
-        }
-        
-        // Debug script to help diagnose issues with the mobile sidebar
-        console.log('DOM fully loaded');
-        const mobileBtn = document.getElementById('mobile-menu-toggle');
-        const sidebar = document.querySelector('.sidebar');
-        
-        // Adds a direct backup event listener
-        if (mobileBtn && sidebar) {
-            console.log('Mobile button found, adding backup handler');
-            mobileBtn.addEventListener('click', function(e) {
-                console.log('Direct click handler triggered');
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Direct style manipulation as a backup
-                if (sidebar.style.left === '0px') {
-                    sidebar.style.left = '-280px';
-                    document.body.style.overflow = '';
-                } else {
-                    sidebar.style.left = '0';
-                    document.body.style.overflow = 'hidden';
-                }
-                
-                return false;
-            });
         }
         
         // Test the media query from JavaScript

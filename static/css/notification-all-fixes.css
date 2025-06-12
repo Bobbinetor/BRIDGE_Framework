@@ -1,0 +1,85 @@
+/**
+ * All Notification Fixes
+ * Questo file contiene TUTTE le correzioni necessarie per le notifiche
+ * sia per problemi di sfocatura (blur) che di scrolling
+ * 
+ * PRIORITÀ MASSIMA: verrà caricato PER ULTIMO per sovrascrivere qualsiasi altro stile
+ */
+
+/* ==== FIX ANTI-BLUR ==== */
+@media (max-width: 768px) {
+    /* Rimuovi tutti i filtri e effetti blur */
+    .notification-menu,
+    .notification-menu *,
+    .notification-list,
+    .notification-item,
+    #notification-overlay {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        filter: none !important;
+    }
+
+    /* Overlay completamente trasparente */
+    #notification-overlay {
+        background: rgba(0, 0, 0, 0.05) !important; 
+        opacity: 0.1 !important;
+    }
+
+    /* ==== FIX SCROLLING ==== */
+    /* Container principale */
+    .notification-menu {
+        position: fixed !important;
+        top: 60px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: calc(100% - 20px) !important;
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        transform: translateZ(0) !important;
+        z-index: 2000 !important;
+    }
+
+    /* Container scrollabile */
+    .notification-scrollable-container {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        transform: translateZ(0) !important;
+    }
+
+    /* Lista delle notifiche */
+    .notification-list {
+        overflow-y: visible !important;
+        max-height: none !important;
+        padding-bottom: 30px !important; /* Spazio extra per iOS */
+    }
+
+    /* Fix specifico per iOS */
+    @supports (-webkit-touch-callout: none) {
+        .notification-menu,
+        .notification-scrollable-container {
+            overflow-y: scroll !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+    }
+
+    /* Previeni clipping del contenuto */
+    .notification-menu {
+        clip-path: none !important;
+        -webkit-clip-path: none !important;
+    }
+
+    /* Migliora il contrasto del testo */
+    .notification-item {
+        color: rgba(0, 0, 0, 0.9) !important;
+        background: white !important;
+    }
+
+    /* Impedisci che elementi interni siano nascosti */
+    .notification-list * {
+        overflow: visible !important;
+    }
+}

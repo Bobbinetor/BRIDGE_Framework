@@ -1,0 +1,121 @@
+/**
+ * Notification Icon and Functionality Fix
+ * This file ensures the notification icon displays and functions correctly on all devices
+ */
+
+/* General notification icon styling */
+.notification-bell-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+#notification-bell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 8px;
+    margin: 0;
+    color: var(--text-color, #333);
+    transition: transform 0.2s, color 0.2s;
+    position: relative;
+    z-index: 101;
+}
+
+#notification-bell:hover {
+    color: var(--primary-color, #0077b6);
+    transform: scale(1.1);
+}
+
+/* Badge styling */
+#notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #ff3b30;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Notification menu improvements */
+.notification-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1002;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.notification-menu.active {
+    display: block;
+}
+
+/* Mobile specific improvements */
+@media (max-width: 768px) {
+    /* Ensure the notification bell is properly visible and clickable */
+    #notification-bell {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 12px;
+        margin: 0;
+        font-size: 18px;
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.05);
+        position: relative;
+        z-index: 101;
+    }
+    
+    /* Enhance touch area */
+    .notification-bell-container {
+        position: relative;
+        margin: 0 4px;
+    }
+    
+    /* Better positioning of notification menu on mobile */
+    .notification-menu {
+        position: fixed;
+        top: 60px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: 95%;
+        margin: 0 auto;
+        max-height: 80vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Visual feedback when tapping */
+    #notification-bell:active {
+        transform: scale(0.95);
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Fix z-index issues */
+    .notification-overlay {
+        z-index: 1001 !important;
+    }
+    
+    /* Improve close button accessibility */
+    .notification-close-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}

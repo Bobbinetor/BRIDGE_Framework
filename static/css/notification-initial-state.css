@@ -1,0 +1,24 @@
+/**
+ * Notification Initial State
+ * Questo file assicura che le notifiche siano nascoste all'avvio dell'applicazione
+ */
+
+/* Nasconde il menu delle notifiche all'avvio */
+.notification-menu {
+    display: none !important;
+}
+
+/* Rimuove la classe active all'avvio */
+.notification-menu.active {
+    display: block !important;
+}
+
+/* Nasconde anche l'overlay all'avvio */
+#notification-overlay {
+    display: none !important;
+}
+
+/* Assicura che lo stile display sia corretto quando è attivo */
+.notification-menu.active {
+    display: block !important;
+}

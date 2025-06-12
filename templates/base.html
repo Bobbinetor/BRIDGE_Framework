@@ -2,13 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0077b6">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- Script con priorità massima per rilevare dispositivi touch -->
+    <script src="{{ url_for('static', filename='js/touch-device-detector.js') }}"></script>
+    <!-- Fix specifico per scrolling iOS -->
+    <script src="{{ url_for('static', filename='js/fix-ios-scroll.js') }}"></script>
+    <!-- Script con priorità massima per forzare lo scrolling su mobile -->
+    <script src="{{ url_for('static', filename='js/notification-mobile-scroll-force.js') }}"></script>
+    <!-- Fix per il problema del toggle delle notifiche -->
+    <script src="{{ url_for('static', filename='js/notification-toggle-fix.js') }}"></script>
     <title>{% block title %}BRIDGE Chat{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modal-form-optimizations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-mobile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-bell-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-mobile-antiblur.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-mobile-clear-overlay.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar-fix.css') }}">
+    <!-- Nuova fix per overlay notifiche - caricato intenzionalmente qui per avere precedenza -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-overlay-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar-fix-enhanced.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar-scroll-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced-mobile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visual-feedback.css') }}">
+    <!-- Fix per lo scrolling delle notifiche -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-scroll-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-mobile-scroll-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-items-enhancement.css') }}">
+    <!-- Stile per il pulsante di chiusura -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-close-button.css') }}">
+    <!-- Nuovo CSS per forzare lo scrolling su tutti i dispositivi -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-scroll-force.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat-list-optimization.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar-scroll-improvement.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar-desktop-fix.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fix critico per lo scrolling delle notifiche - caricato dopo tutti gli altri CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/critical-notification-fixes.css') }}">
+    <!-- Fix unico e definitivo per tutti i problemi delle notifiche -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-all-fixes.css') }}">
+    <!-- Assicura che le notifiche siano chiuse all'avvio -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notification-initial-state.css') }}">
     {% block extra_css %}{% endblock %}
+    <!-- Fix anti-blur per dispositivi mobili (caricato il prima possibile) -->
+    <script src="{{ url_for('static', filename='js/anti-blur.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@12.3.2/dist/markdown-it.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js" defer></script>
+    <!-- Controller unificato della sidebar v2.0 con supporto desktop/mobile migliorato -->
+    <script src="{{ url_for('static', filename='js/unified-sidebar-controller-v2.js') }}"></script>
+    <!-- Script di supporto -->
+    <script src="{{ url_for('static', filename='js/notification-icon-fix.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-mobile-fix.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-visibility-fix.js') }}"></script>
+    <!-- Nuovo enforcer per garantire la trasparenza dell'overlay -->
+    <script src="{{ url_for('static', filename='js/notification-overlay-enforcer.js') }}"></script>
+    <!-- Miglioramento scrolling notifiche -->
+    <script src="{{ url_for('static', filename='js/notification-scroll-enhancement.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-mobile-scroll-enhancer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-touch-handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-runtime-fixer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-close-button.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sidebar-scroll-optimization.js') }}"></script>
+    
+    <!-- Vecchi controller (disattivati) -->
+    <!-- <script src="{{ url_for('static', filename='js/fixed-sidebar.js') }}"></script> -->
+    <!-- <script src="{{ url_for('static', filename='js/unified-sidebar-controller.js') }}"></script> -->
 </head>
 <body>
     {% block content %}{% endblock %}

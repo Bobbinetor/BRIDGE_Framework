@@ -1,0 +1,93 @@
+/**
+ * Fix specifico per risolvere il problema delle notifiche sfocate su dispositivi mobili
+ * Questo file rimuove completamente qualsiasi effetto di blur e filtro che potrebbe causare problemi su dispositivi mobili
+ */
+
+@media (max-width: 768px) {
+    /* Rimozione globale di filtri che causano sfocatura */
+    body, 
+    body *, 
+    .notification-menu,
+    .notification-menu *,
+    #notification-overlay,
+    .chat-container,
+    .sidebar {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        -webkit-filter: none !important;
+        filter: none !important;
+        transform: none !important;
+        transition: none !important;
+        opacity: 1 !important;
+    }
+
+    /* Elimina qualsiasi effetto sfocato sul menu notifiche */
+    .notification-menu {
+        display: none;
+        position: fixed !important;
+        top: 60px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: calc(100% - 20px) !important;
+        max-height: 80vh !important;
+        margin: 0 auto !important;
+        overflow: auto !important;
+        background-color: white !important;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+        z-index: 2000 !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Quando il menu è attivo, mostralo */
+    .notification-menu.active {
+        display: block !important;
+    }
+
+    /* Styling migliorato per il contenuto delle notifiche */
+    .notification-menu-header,
+    .notification-list,
+    .notification-item {
+        background-color: white !important;
+        color: #333 !important;
+        text-shadow: none !important;
+    }
+
+    /* Overlay dello sfondo - estremamente trasparente */
+    #notification-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background-color: rgba(0, 0, 0, 0.01) !important; /* Quasi invisibile */
+        z-index: 1999 !important;
+        display: none;
+        opacity: 0.1 !important; /* Estremamente trasparente */
+    }
+
+    /* Rimuove filtri trasformazioni dal container principale */
+    .app-container,
+    .chat-container,
+    .sidebar {
+        -webkit-filter: none !important;
+        filter: none !important;
+        transform: none !important;
+        -webkit-transform: none !important;
+    }
+    
+    /* Assicuriamoci che lo scrolling funzioni */
+    .notification-list {
+        max-height: calc(80vh - 60px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Rimuove eventuali mask-image o clip-path */
+    * {
+        -webkit-mask-image: none !important;
+        mask-image: none !important;
+        clip-path: none !important;
+    }
+}

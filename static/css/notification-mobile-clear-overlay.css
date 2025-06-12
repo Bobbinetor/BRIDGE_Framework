@@ -1,0 +1,35 @@
+/**
+ * Fix per il problema di oscuramento dello schermo quando si aprono le notifiche mobile
+ * Questo file rende l'overlay trasparente o leggermente traslucido per non oscurare il contenuto
+ */
+
+@media (max-width: 768px) {
+    /* Overlay completamente trasparente per il menu delle notifiche */
+    #notification-overlay, 
+    .notification-overlay {
+        background-color: rgba(0, 0, 0, 0.01) !important; /* Overlay quasi invisibile */
+        opacity: 0.1 !important; /* Estremamente trasparente */
+        pointer-events: auto !important; /* Per consentire i click sull'overlay per chiudere */
+    }
+    
+    /* Migliora la visibilità del menu notifiche rispetto allo sfondo più chiaro */
+    .notification-menu {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important; /* Ombra più pronunciata */
+        border: 1px solid rgba(0, 0, 0, 0.15) !important; /* Bordo più definito */
+        background-color: rgba(255, 255, 255, 0.95) !important; /* Leggera trasparenza */
+    }
+    
+    /* Assicura che i testi nel menu siano ben leggibili */
+    .notification-menu-header h3,
+    .notification-item .notification-content {
+        color: #000 !important; /* Testo scuro per maggiore contrasto */
+        font-weight: 500 !important; /* Un po' più spesso per leggibilità */
+    }
+    
+    /* Styling migliorato per il contenitore principale per assicurare visibilità */
+    .app-container, 
+    .chat-container {
+        opacity: 1 !important;
+        filter: none !important;
+    }
+}

@@ -1,0 +1,35 @@
+/**
+ * Notification Overlay Fix
+ * Questo file risolve specificamente il problema dell'overlay troppo scuro
+ * per le notifiche su dispositivi mobili
+ */
+
+/* Imposta stili a massima precedenza per l'overlay delle notifiche */
+#notification-overlay {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+    opacity: 0.1 !important;
+}
+
+/* Migliora la visibilità delle notifiche */
+.notification-menu {
+    /* Aumenta l'opacità del menu */
+    opacity: 1 !important;
+    /* Assicura che il menu abbia uno sfondo solido e chiaro */
+    background-color: #ffffff !important;
+    /* Migliora il contrasto con bordi definiti */
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Nasconde automaticamente l'overlay per desktop */
+@media (min-width: 769px) {
+    #notification-overlay {
+        display: none !important;
+    }
+}
+
+/* Stile per il contenitore dell'app quando le notifiche sono attive su mobile */
+body.notification-open .app-container {
+    filter: none !important;
+    opacity: 1 !important;
+}

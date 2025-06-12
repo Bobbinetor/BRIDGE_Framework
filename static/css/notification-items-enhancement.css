@@ -1,0 +1,65 @@
+/**
+ * Notification Item Enhancement
+ * Questo file migliora la presentazione e l'interazione con gli elementi delle notifiche
+ */
+
+/* Stile generale per gli elementi della notifica */
+.notification-item {
+    padding: 12px !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.notification-item:hover {
+    background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.notification-item:active {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Stile per la notifica vuota */
+.empty-notification {
+    text-align: center !important;
+    color: #777 !important;
+    font-style: italic !important;
+    padding: 20px !important;
+}
+
+/* Contenuto della notifica */
+.notification-content {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+}
+
+.notification-time {
+    font-size: 12px !important;
+    color: #777 !important;
+    margin-top: 4px !important;
+    display: block !important;
+}
+
+/* Stili specifici per mobile */
+@media (max-width: 768px) {
+    /* Aumenta la dimensione del testo per miglior leggibilità su mobile */
+    .notification-content {
+        font-size: 15px !important;
+    }
+    
+    /* Aumenta l'area tocco */
+    .notification-item {
+        padding: 14px !important;
+    }
+    
+    /* Assicurati che il contenitore sia scrollabile */
+    #notification-menu {
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 15px !important;
+    }
+}
+
+/* Stile per notifiche non lette */
+.notification-item.unread {
+    border-left: 3px solid #0077b6 !important;
+    background-color: rgba(0, 119, 182, 0.05) !important;
+}

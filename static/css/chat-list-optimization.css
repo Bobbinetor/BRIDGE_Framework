@@ -1,0 +1,93 @@
+/**
+ * Chat List Optimization
+ * Questo file migliora la visualizzazione e l'interattività della lista chat
+ */
+
+/* Stile generale per la chat list */
+.chat-list {
+    padding: 8px;
+    margin: 0;
+}
+
+/* Miglioramento per dispositivi mobili */
+@media (max-width: 768px) {
+    /* Rimuove lo scrolling separato dalla chat list */
+    .chat-list {
+        overflow-y: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 8px;
+        margin: 0;
+    }
+    
+    /* Migliora l'aspetto delle singole chat */
+    .chat-list .chat-item {
+        margin: 6px 0;
+        padding: 14px 12px;
+        border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.06);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-left: 3px solid transparent;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+    
+    /* Evidenzia chat attiva */
+    .chat-list .chat-item.active {
+        border-left-color: #48CAE4;
+        background-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    /* Effetto hover touch */
+    .chat-list .chat-item:active {
+        transform: scale(0.98);
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    /* Migliora l'icona della chat */
+    .chat-list .chat-item i {
+        font-size: 16px;
+        width: 20px;
+        text-align: center;
+        margin-right: 12px;
+    }
+    
+    /* Truncate di lunghi nomi chat */
+    .chat-list .chat-item span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+        font-size: 15px;
+    }
+    
+    /* Crea una separazione visiva tra chat list e altre sezioni */
+    .chat-list::after {
+        content: "";
+        display: block;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 15px 5px 10px;
+    }
+    
+    /* Crea uno spazio visivo vuoto se non ci sono chat */
+    .chat-list:empty {
+        min-height: 100px;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>');
+        background-position: center;
+        background-repeat: no-repeat;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 14px;
+    }
+    
+    .chat-list:empty::after {
+        content: "No chats yet";
+        display: block;
+        margin-top: 60px;
+    }
+}

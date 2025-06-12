@@ -1,0 +1,245 @@
+/**
+ * Enhanced Mobile Experience
+ * Questo file migliora l'esperienza utente su dispositivi mobili
+ * concentrandosi su fluidità, interattività e prestazioni
+ */
+
+/* Impostazioni generali per migliorare l'esperienza mobile */
+@media (max-width: 768px) {
+    /* Migliora la fluidità degli elementi interattivi */
+    * {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        touch-action: manipulation;
+    }
+
+    /* Ottimizza gli elementi clickabili */
+    button, 
+    .action-btn, 
+    .chat-item,
+    .sidebar-controls button,
+    .notification-bell,
+    .language-selector select {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 12px;
+        margin: 4px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.2s ease-out;
+    }
+
+    /* Effetti touch per elementi interattivi */
+    button:active, 
+    .action-btn:active, 
+    .chat-item:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+    }
+
+    /* Migliora la visibilità degli elementi attivi */
+    .chat-item.active {
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        border-left: 4px solid #48CAE4;
+    }
+
+    /* Migliora l'usabilità della sidebar */
+    .sidebar {
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 20px;
+    }
+
+    /* Migliora la visualizzazione e lo scroll della lista chat */
+    .chat-list {
+        overflow-y: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 8px;
+        margin: 0;
+        flex-grow: 0;
+    }
+
+    /* Migliora la visualizzazione di ogni chat */
+    .chat-item {
+        margin: 4px 0;
+        padding: 14px 12px;
+        border-radius: 8px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    /* Ottimizzazioni per l'header della sidebar */
+    .sidebar-header {
+        padding: 16px 12px;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background-color: var(--deep-blue);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Migliora la visualizzazione delle informazioni utente */
+    .user-info {
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin: 8px;
+    }
+
+    /* Ottimizza il calendario per mobile */
+    .sidebar-calendar {
+        padding: 12px 8px;
+        background-color: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        margin: 8px;
+    }
+
+    /* Miglioramenti per i container principali */
+    .app-container {
+        height: 100%;
+        width: 100%;
+    }
+    
+    /* Chat container più fluido */
+    .chat-container {
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* Header chat più compatto */
+    .chat-header {
+        padding: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+    }
+    
+    /* Migliora la visualizzazione dei messaggi */
+    .messages-container {
+        flex-grow: 1;
+        padding: 10px 8px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .chat-message {
+        max-width: 85%;
+        margin: 8px 0;
+        padding: 12px;
+        border-radius: 16px;
+        position: relative;
+        word-break: break-word;
+    }
+    
+    /* Migliora la visualizzazione dell'input dei messaggi */
+    .message-input-container {
+        padding: 10px 8px;
+        position: sticky;
+        bottom: 0;
+        background-color: #fff;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Migliora il feedback visivo per elementi interattivi */
+    .action-btn:active,
+    .mobile-menu-toggle:active,
+    button:active {
+        transform: scale(0.96);
+    }
+
+    /* Ottimizzazioni per le notifiche */
+    .notification-bell {
+        position: relative;
+        padding: 12px;
+    }
+    
+    .notification-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: #ff3b30;
+        color: white;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .notification-menu {
+        border-radius: 12px;
+        overflow-x: hidden; /* Solo l'overflow orizzontale viene nascosto */
+        overflow-y: auto;   /* Consenti lo scroll verticale */
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+        -webkit-overflow-scrolling: touch; /* Per uno scrolling fluido su iOS */
+    }
+    
+    /* Animazioni più fluide per interfaccia mobile */
+    .sidebar,
+    .sidebar.active,
+    .notification-menu,
+    .notification-menu.active {
+        transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+
+    /* Correzioni specifiche per l'overlay delle notifiche e sidebar */
+    .sidebar-overlay.active,
+    #notification-overlay {
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+    }
+}
+
+/* Ottimizzazioni per dispositivi piccoli */
+@media (max-width: 380px) {
+    /* Riduci i margini/padding per più spazio utile */
+    .sidebar {
+        width: 260px;
+    }
+    
+    .chat-item {
+        padding: 12px 10px;
+    }
+    
+    .chat-message {
+        max-width: 90%;
+        padding: 10px;
+    }
+    
+    .chat-header {
+        padding: 10px 8px;
+    }
+}
+
+/* Animazione più fluida per l'apertura della sidebar */
+@media (max-width: 768px) {
+    @keyframes sidebarEnter {
+        from {
+            transform: translateX(-100%);
+            opacity: 0.8;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    .sidebar.active {
+        animation: sidebarEnter 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+}

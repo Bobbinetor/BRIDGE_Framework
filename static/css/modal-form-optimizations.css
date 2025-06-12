@@ -1,0 +1,101 @@
+/* 
+ * Ottimizzazioni per modali e form
+ * Questo file migliora l'aspetto e il comportamento di modali e form su dispositivi mobili
+ */
+
+/* Modali */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 25px;
+    width: 90%;
+    max-width: 500px;
+    margin: 10vh auto 0;
+    transition: all 0.3s ease;
+}
+
+/* Ottimizzazioni per dispositivi mobili */
+@media (max-width: 768px) {
+    .modal-content {
+        margin-top: 5vh;
+        padding: 20px;
+        width: 90%;
+        max-width: none;
+    }
+    
+    .modal-content h3 {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+    }
+}
+
+/* Form fields */
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--deep-blue);
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px; /* Evita lo zoom su iOS */
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+/* Ottimizzazioni touch per dispositivi mobili */
+@media (max-width: 768px) {
+    input, select, textarea {
+        padding: 14px 12px;
+    }
+    
+    button {
+        padding: 12px;
+        min-height: 44px;
+    }
+    
+    .form-group {
+        margin-bottom: 24px;
+    }
+    
+    /* Migliora visibilità del focus */
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--medium-blue);
+        box-shadow: 0 0 0 2px rgba(0, 119, 182, 0.2);
+        outline: none;
+    }
+}

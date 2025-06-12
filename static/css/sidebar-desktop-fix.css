@@ -1,0 +1,71 @@
+/**
+ * Desktop sidebar toggle fix
+ * Questo file si concentra sul corretto funzionamento della sidebar in modalità desktop
+ * e sul comportamento quando è collassata/espansa
+ */
+
+/* Miglioriamo lo stato collassato della sidebar su desktop */
+@media (min-width: 769px) {
+    /* Stato normale (espanso) */
+    .sidebar {
+        width: var(--sidebar-width, 280px);
+        transition: width 0.3s ease, transform 0.3s ease;
+    }
+
+    /* Stato collassato */
+    .sidebar.sidebar-collapsed {
+        width: 60px;
+        overflow-x: hidden;
+    }
+
+    /* Nascondi il testo quando collassato */
+    .sidebar.sidebar-collapsed .logo-text,
+    .sidebar.sidebar-collapsed .chat-item span,
+    .sidebar.sidebar-collapsed .user-info span,
+    .sidebar.sidebar-collapsed .sidebar-calendar,
+    .sidebar.sidebar-collapsed .chat-item .fa-trash-alt {
+        display: none !important;
+    }
+
+    /* Centra le icone quando collassato */
+    .sidebar.sidebar-collapsed .chat-item {
+        padding: 10px 5px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .sidebar.sidebar-collapsed .chat-item i {
+        margin-right: 0;
+        font-size: 1.2rem;
+    }
+
+    /* Cambia icona dell'header quando collassato */
+    .sidebar.sidebar-collapsed .toggle-sidebar-btn i.fa-bars {
+        display: none;
+    }
+
+    .sidebar.sidebar-collapsed .toggle-sidebar-btn i.fa-expand {
+        display: inline-block;
+    }
+
+    /* Ajusta il container principale */
+    .sidebar.sidebar-collapsed + .chat-container,
+    body:not(.sidebar-open) .sidebar.sidebar-collapsed ~ .chat-container {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+
+    /* Transizione fluida per il container principale */
+    .chat-container {
+        transition: margin-left 0.3s ease, width 0.3s ease;
+    }
+
+    /* Stile per l'icona di espansione */
+    .toggle-sidebar-btn i.fa-expand {
+        display: none;
+    }
+
+    .sidebar.sidebar-collapsed .toggle-sidebar-btn i.fa-expand {
+        display: inline-block;
+    }
+}

@@ -1,0 +1,90 @@
+/**
+ * Notification Scrolling Force CSS
+ * Questo file forza lo scrolling corretto delle notifiche su tutti i dispositivi mobili
+ * con enfasi specifica sui dispositivi iOS che potrebbero avere problemi
+ */
+
+/* Stile globale per supportare lo scrolling */
+html.touch-device * {
+    -webkit-overflow-scrolling: touch !important;
+}
+
+/* Main container must be scrollable */
+.notification-menu {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 70vh !important;
+    transform: translateZ(0) !important; /* Hardware acceleration */
+    will-change: scroll-position !important; /* Hardware acceleration hint */
+}
+
+/* Remove any overflow:hidden that might be causing problems */
+.notification-list,
+.notification-scrollable-container {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: none !important; /* Let parent control the height */
+    transform: translateZ(0) !important; /* Hardware acceleration */
+}
+
+/* Specific mobile enhancements */
+@media (max-width: 768px) {
+    /* Detect touch support and add a class */
+    html.touch-device body {
+        touch-action: manipulation;
+    }
+
+    /* Prevent body scroll when notifications are open */
+    body.notification-open {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Make notification container take most of the screen height */
+    .notification-menu {
+        height: auto !important;
+        max-height: 70vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Ensure the scrollable area takes all available space */
+    .notification-scrollable-container {
+        flex: 1 !important;
+        height: auto !important; 
+        overflow-y: scroll !important; /* Scroll is more reliable than auto on mobile */
+    }
+
+    /* Remove any transforms that might interfere with scrolling */
+    .notification-menu,
+    .notification-scrollable-container,
+    .notification-list {
+        transform: none !important;
+        -webkit-transform: none !important;
+    }
+
+    /* Safari-specific fixes */
+    @supports (-webkit-touch-callout: none) {
+        .notification-scrollable-container {
+            overflow-y: scroll !important; /* Force scroll on Safari */
+            -webkit-overflow-scrolling: touch !important;
+            padding-bottom: 100px !important; /* Add extra padding for iOS */
+        }
+    }
+}
+
+/* Better scrollbar visuals - optional */
+.notification-scrollable-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.notification-scrollable-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.notification-scrollable-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}

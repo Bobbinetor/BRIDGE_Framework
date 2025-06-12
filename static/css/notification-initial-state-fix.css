@@ -1,0 +1,59 @@
+/**
+ * Notification Initial State Fix
+ * Assicura che le notifiche siano correttamente nascoste all'avvio dell'applicazione
+ * e che possano essere chiuse correttamente su mobile
+ * 
+ * MASSIMA PRIORITÀ: questo CSS deve essere caricato dopo tutti gli altri CSS
+ */
+
+/* Stato iniziale corretto per il menu notifiche */
+.notification-menu:not(.active) {
+    display: none !important;
+}
+
+/* Stato iniziale corretto per l'overlay */
+.notification-overlay:not(.active) {
+    display: none !important;
+}
+
+/* Fix specifici per mobile */
+@media (max-width: 768px) {
+    /* Assicura che le notifiche siano chiuse all'avvio su mobile */
+    .notification-menu:not(.active) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* Garantisce che il pulsante della notifica sia cliccabile */
+    #notification-bell {
+        z-index: 2001 !important; /* Superiore al menu per garantire la cliccabilità */
+        position: relative !important;
+    }
+    
+    /* Garantisce che l'overlay funzioni correttamente */
+    .notification-overlay {
+        z-index: 1999 !important;
+        display: none;
+    }
+    
+    /* Assicura che il menu delle notifiche sia sempre posizionato correttamente */
+    .notification-menu.active {
+        z-index: 2000 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Garantisce che lo scrolling funzioni quando le notifiche sono aperte */
+    body.notification-open {
+        overflow: hidden !important;
+    }
+    
+    body.notification-open .notification-menu {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}

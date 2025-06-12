@@ -1,0 +1,65 @@
+
+/**
+ * Fix per risolvere il problema delle notifiche sfocate su dispositivi mobili
+ * Questo file assicura che le notifiche appaiano nitide e chiare su dispositivi mobili
+ */
+
+@media (max-width: 768px) {
+    /* Rimozione di qualsiasi filtro blur */
+    #notification-menu, 
+    .notification-menu, 
+    .notification-menu * {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        filter: none !important;
+    }
+    
+    /* Assicura che il menu delle notifiche sia completamente opaco */
+    .notification-menu {
+        background-color: white !important;
+        opacity: 1 !important;
+    }
+    
+    /* Migliora la leggibilità del testo */
+    .notification-menu-header,
+    .notification-list, 
+    .notification-item {
+        color: #333 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Corregge eventuali problemi di sovrapposizione */
+    #notification-overlay {
+        z-index: 1099 !important; /* Un livello sotto il menu notifiche */
+        backdrop-filter: none !important; /* Rimuove eventuali filtri blur */
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    .notification-menu {
+        z-index: 1100 !important; /* Assicura che sia sopra l'overlay */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important; /* Ombra per definire meglio i bordi */
+    }
+    
+    /* Migliora il contrasto tra sfondo e menu */
+    #notification-overlay {
+        background-color: rgba(0, 0, 0, 0.5) !important; /* Scuriamo un po' l'overlay */
+    }
+    
+    /* Migliora la definizione dei bordi del menu */
+    .notification-menu {
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+    
+    /* Assicuriamo che il contenuto sia sempre visibile e nitido */
+    .notification-list {
+        background-color: white !important;
+    }
+    
+    /* Semplifica lo stile per evitare problemi di rendering */
+    .notification-item {
+        border-bottom: 1px solid #e5e5e5 !important;
+        background: white !important;
+    }
+}

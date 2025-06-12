@@ -1,0 +1,71 @@
+/**
+ * Notification Scroll Fix
+ * Questo file risolve il problema dello scrolling nelle notifiche,
+ * permettendo di visualizzare tutte le notifiche anche quando sono numerose.
+ */
+
+/* Fix generale per l'overflow delle notifiche */
+.notification-menu {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important; /* Per uno scrolling fluido su iOS */
+}
+
+.notification-list {
+    max-height: none !important; /* Rimuovi eventuali vincoli di altezza */
+    overflow-y: visible !important; /* Consenti lo scorrimento dentro il contenitore padre */
+}
+
+/* Migliorie specifiche per dispositivi mobili */
+@media (max-width: 768px) {
+    .notification-menu {
+        max-height: 70vh !important; /* Limita l'altezza al 70% della viewport su mobile */
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Assicura che l'header delle notifiche rimanga fisso durante lo scrolling */
+    .notification-menu-header {
+        position: sticky !important;
+        top: 0 !important;
+        background-color: white !important;
+        z-index: 2 !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+        padding: 12px !important;
+    }
+    
+    /* Migliora l'esperienza di scrolling per gli elementi nella lista */
+    .notification-list {
+        padding-bottom: 10px !important; /* Aggiungi padding in basso per migliorare l'UX */
+    }
+    
+    .notification-item {
+        padding: 14px 12px !important; /* Aumenta il padding per migliorare la touch area */
+    }
+}
+
+/* Specifiche per desktop */
+@media (min-width: 769px) {
+    .notification-menu {
+        max-height: 400px !important; /* Altezza massima per desktop */
+        overflow-y: auto !important;
+    }
+    
+    /* Stili migliorati per lo scrollbar su browser WebKit */
+    .notification-menu::-webkit-scrollbar {
+        width: 6px !important;
+    }
+    
+    .notification-menu::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05) !important;
+        border-radius: 3px !important;
+    }
+    
+    .notification-menu::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border-radius: 3px !important;
+    }
+    
+    .notification-menu::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3) !important;
+    }
+}

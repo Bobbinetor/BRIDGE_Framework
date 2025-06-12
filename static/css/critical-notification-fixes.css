@@ -1,0 +1,53 @@
+/**
+ * CRITICAL FIXES FOR NOTIFICATION SCROLLING
+ * Questo file contiene fix di massima priorità per lo scrolling delle notifiche
+ * utilizzando selettori ad alta specificità per sovrascrivere qualsiasi altro stile
+ */
+
+/* Fix universale per mobile */
+@media (max-width: 768px) {
+    /* Forza scrolling per il menu delle notifiche - alta specificità */
+    html body .app-container .chat-header .header-actions .notification-bell-container #notification-menu.notification-menu {
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Container scrollabile con alta specificità */
+    html body .app-container .notification-bell-container #notification-menu .notification-scrollable-container {
+        overflow-y: auto !important; 
+        -webkit-overflow-scrolling: touch !important;
+        max-height: none !important;
+        flex: 1 !important;
+        position: relative !important;
+    }
+    
+    /* Lista delle notifiche con specificità massima */
+    html body .app-container #notification-menu .notification-scrollable-container #notification-list.notification-list {
+        overflow-y: visible !important;
+        max-height: none !important;
+    }
+    
+    /* Fix per iOS Safari - specificità massima */
+    @supports (-webkit-touch-callout: none) {
+        html body .app-container #notification-menu.notification-menu,
+        html body .app-container #notification-menu .notification-scrollable-container {
+            overflow-y: scroll !important; /* Per iOS Safari scroll è più affidabile di auto */
+            -webkit-overflow-scrolling: touch !important;
+            transform: translateZ(0) !important; /* Forza hardware acceleration */
+        }
+    }
+}
+
+/* Fix universale per qualsiasi dimensione schermo */
+html body .notification-scrollable-container {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+/* Fix per qualsiasi browser che possa limitare lo scrolling */
+html.touch-device .notification-menu,
+html.touch-device .notification-scrollable-container,
+html.touch-device .notification-list {
+    touch-action: pan-y !important;
+}
