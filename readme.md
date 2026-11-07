@@ -232,7 +232,7 @@ python app.py
 
 Il progetto include diversi branch per funzionalità specifiche:
 - `main`: Branch principale con la versione stabile dell'applicazione
-- `alfredo`: Branch con l'implementazione della modalità vocale
+- `voice-mode`: Branch con l'implementazione della modalità vocale
 
 ## Licenza
 
